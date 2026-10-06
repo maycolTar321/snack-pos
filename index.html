@@ -3,36 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Punto de Venta - Snack</title>
-    <!-- Aquí conectamos la pintura y el cerebro -->
+    <title>Menú Snack</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Cargamos una fuente moderna similar a la de la imagen -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="contenedor">
-        <h1>🍔 Caja Registradora del Snack 🥤</h1>
-        
-        <div class="pantalla-dividida">
-            <!-- Lado izquierdo: Botones de comida -->
-            <div class="menu">
-                <h2>Menú</h2>
-                <button onclick="agregarProducto('Hamburguesa', 15)">Hamburguesa (15 Bs)</button>
-                <button onclick="agregarProducto('Papas Fritas', 10)">Papas Fritas (10 Bs)</button>
-                <button onclick="agregarProducto('Refresco', 5)">Refresco (5 Bs)</button>
+    <div class="app-contenedor">
+        <!-- Imagen de portada y título del restaurante -->
+        <div class="portada">
+            <div class="portada-texto">
+                <h1>Mi Snack</h1>
+                <p>Mirpur</p>
             </div>
+        </div>
 
-            <!-- Lado derecho: El carrito y el total -->
-            <div class="carrito">
-                <h2>🛒 Lista de compra</h2>
-                <ul id="lista-productos">
-                    <!-- Los productos irán apareciendo aquí mágicamente -->
-                </ul>
-                <h3>Total a cobrar: <span id="precio-total">0</span> Bs</h3>
-                <button class="boton-cobrar" onclick="cobrar()">Cobrar Venta</button>
+        <!-- Categorías (Visuales) -->
+        <div class="categorias">
+            <button class="btn-categoria activa">Todo</button>
+            <button class="btn-categoria">Pizza</button>
+            <button class="btn-categoria">Snacks</button>
+            <button class="btn-categoria">Bebidas</button>
+        </div>
+
+        <!-- Cuadrícula de Productos -->
+        <div class="cuadricula" id="menu-productos">
+            <p style="padding: 20px; color: #888; text-align: center;">Cargando menú...</p>
+        </div>
+
+        <!-- Barra flotante de Checkout -->
+        <div class="barra-inferior" onclick="abrirModal()">
+            <div class="precio" id="total-price">$0</div>
+            <div class="checkout">
+                Checkout
+                <div class="contador-items" id="item-count">0</div>
             </div>
         </div>
     </div>
 
-    <!-- Aquí conectamos el archivo que hace las matemáticas -->
+    <!-- Pantalla emergente (Modal) para poner el nombre y enviar pedido -->
+    <div class="modal" id="modal-checkout">
+        <div class="modal-contenido">
+            <h2>Completar Pedido</h2>
+            <ul id="lista-resumen" class="lista-resumen"></ul>
+            <input type="text" id="nombre-cliente" placeholder="Entregar a: (Nombre o Mesa)">
+            <button class="btn-enviar" id="btn-enviar" onclick="enviarPedido()">Enviar a Cocina</button>
+            <button class="btn-cerrar" onclick="cerrarModal()">Seguir comprando</button>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
