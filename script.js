@@ -2,14 +2,12 @@ const API_URL="https://script.google.com/macros/s/AKfycbyGXX6nPtKPfSsGEGbieM4eaI
 const STORAGE_KEY="lachura_products_v3";
 
 const demo=[
-{id:"d1",nombre:"Empanada de Queso",precio:8,categoria:"Empanadas",imagen:"https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=85",descripcion:"Masa doradita y relleno cremoso, recién preparada."},
-{id:"d2",nombre:"Empanada de Carne",precio:10,categoria:"Empanadas",imagen:"https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=800&q=85",descripcion:"Relleno sabroso y especiado al estilo de la casa."},
-{id:"d3",nombre:"Pizza Pepperoni",precio:38,categoria:"Pizza",imagen:"https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=800&q=85",descripcion:"Queso fundido, salsa de tomate y pepperoni."},
-{id:"d4",nombre:"Pizza Chura",precio:45,categoria:"Pizza",imagen:"https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=85",descripcion:"La especialidad de la casa para compartir."},
-{id:"d5",nombre:"Papas Chura",precio:18,categoria:"Snacks",imagen:"https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=85",descripcion:"Papas crocantes para acompañar tu pedido."},
-{id:"d6",nombre:"Salchipapa",precio:22,categoria:"Snacks",imagen:"https://images.unsplash.com/photo-1623238913973-21e45cced554?auto=format&fit=crop&w=800&q=85",descripcion:"Una combinación contundente y deliciosa."},
-{id:"d7",nombre:"Coca-Cola",precio:8,categoria:"Bebidas",imagen:"https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=800&q=85",descripcion:"Bien fría para acompañar tu comida."},
-{id:"d8",nombre:"Limonada",precio:10,categoria:"Bebidas",imagen:"https://images.unsplash.com/photo-1523677011781-c91d1bbe2f9e?auto=format&fit=crop&w=800&q=85",descripcion:"Refrescante, cítrica y perfecta para el calor."}
+{id:"d1",nombre:"Empanadas Fritas",precio:5,categoria:"Empanadas",imagen:"https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=85",descripcion:"Deliciosas empanadas fritas crujientes."},
+{id:"d2",nombre:"Empanadas Mixtas",precio:7,categoria:"Empanadas",imagen:"https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=800&q=85",descripcion:"Relleno mixto especial de la casa."},
+{id:"d3",nombre:"Pizza de Todo",precio:45,categoria:"Pizza",imagen:"https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=85",descripcion:"Nuestra pizza especial con todos los ingredientes."},
+{id:"d4",nombre:"Pizza Pepperoni",precio:38,categoria:"Pizza",imagen:"https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=800&q=85",descripcion:"Clásica pizza de pepperoni y extra queso."},
+{id:"d5",nombre:"Sodas",precio:8,categoria:"Bebidas",imagen:"https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=800&q=85",descripcion:"Sodas refrescantes surtidas."},
+{id:"d6",nombre:"Soda Mini",precio:4,categoria:"Bebidas",imagen:"https://images.unsplash.com/photo-1523677011781-c91d1bbe2f9e?auto=format&fit=crop&w=800&q=85",descripcion:"Ideal para acompañar tus empanadas."}
 ];
 
 let products=[],localProducts=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"),cart=[],category="Todo",term="",selected=null;
@@ -17,8 +15,8 @@ const $=id=>document.getElementById(id);
 const money=n=>`Bs ${Number(n||0).toFixed(2)}`;
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 function fallback(cat){
- const m={Pizza:demo[3].imagen,Empanadas:demo[0].imagen,Snacks:demo[4].imagen,Bebidas:demo[7].imagen};
- return m[cat]||demo[4].imagen;
+ const m={Pizza:demo[2]?.imagen,Empanadas:demo[0]?.imagen,Snacks:demo[0]?.imagen,Bebidas:demo[4]?.imagen};
+ return m[cat]||demo[0]?.imagen||"";
 }
 function normalize(p,i){
  return{id:p.id||p.ID||`api-${i}`,nombre:p.nombre||p.Nombre||p.name||"Producto",precio:Number(p.precio??p.Precio??p.price??0),categoria:p.categoria||p.Categoria||"Snacks",imagen:p.imagen||p.Imagen||p.image||fallback(p.categoria),descripcion:p.descripcion||p.Descripcion||"Preparado especialmente para ti."};
@@ -28,7 +26,8 @@ async function load(){
  try{
   const r=await fetch(API_URL,{cache:"no-store"}); if(!r.ok)throw Error();
   const data=await r.json(); const remote=Array.isArray(data)?data.map(normalize):[];
-  products=[...localProducts,...(remote.length?remote:demo)];
+  // Combina los productos de la API con los locales y el demo
+  products=[...localProducts,...remote,...demo];
  }catch(e){products=[...localProducts,...demo]}
  render();
 }
@@ -95,6 +94,17 @@ $("clearLocal").onclick=()=>{if(!localProducts.length)return toast("No tienes pr
 
 $("btn-enviar").onclick=async()=>{
  if(!cart.length)return toast("Agrega productos primero");
+ 
+ if(isCajaMode) {
+  $("checkoutTotal").textContent = money(cart.reduce((s,x)=>s+x.precio*x.qty,0));
+  $("cashReceived").value = "";
+  $("checkoutChange").textContent = "Bs 0.00";
+  close("cartModal");
+  open("checkoutModal");
+  setTimeout(()=>$("cashReceived").focus(), 100);
+  return;
+ }
+
  const cliente=$("nombre-cliente").value.trim();if(!cliente){$("nombre-cliente").focus();return toast("Escribe tu nombre o mesa")}
  const btn=$("btn-enviar");btn.disabled=true;btn.innerHTML="Enviando…";
  const total=cart.reduce((s,x)=>s+x.precio*x.qty,0),orden=cart.flatMap(x=>Array(x.qty).fill(x.nombre)).join(", ");
@@ -102,4 +112,122 @@ $("btn-enviar").onclick=async()=>{
  catch(e){toast("No se pudo enviar. Revisa tu conexión.")}
  finally{btn.disabled=false;btn.innerHTML='Enviar a cocina <b>↗</b>'}
 };
+
+/* --- MODO CAJA Y VENTAS --- */
+let isCajaMode = localStorage.getItem("cajaMode")==="true";
+let sales = JSON.parse(localStorage.getItem("lachura_sales")||"[]");
+
+$("cajaModeToggle").checked = isCajaMode;
+$("cajaModeToggle").onchange = (e) => {
+ isCajaMode = e.target.checked;
+ localStorage.setItem("cajaMode", isCajaMode);
+ toast(isCajaMode ? "Modo Caja activado" : "Modo Cliente activado");
+ updateCajaUI();
+};
+
+function updateCajaUI() {
+ if(isCajaMode) {
+  $("btn-enviar").innerHTML = "Cobrar Venta <b>$</b>";
+  $("nombre-cliente").parentElement.hidden = true; // hide "A nombre de quien"
+ } else {
+  $("btn-enviar").innerHTML = "Enviar a cocina <b>↗</b>";
+  $("nombre-cliente").parentElement.hidden = false;
+ }
+}
+updateCajaUI();
+
+$("cashReceived").oninput = (e) => {
+ const total = cart.reduce((s,x)=>s+x.precio*x.qty,0);
+ const cash = Number(e.target.value);
+ const change = cash - total;
+ $("checkoutChange").textContent = money(Math.max(0, change));
+ $("checkoutChange").style.color = change < 0 ? "#a22b1b" : "var(--wine)";
+};
+
+$("btn-confirm-sale").onclick = () => {
+ const total = cart.reduce((s,x)=>s+x.precio*x.qty,0);
+ const cash = Number($("cashReceived").value);
+ if(cash < total && cash > 0) return toast("El efectivo es menor al total");
+ 
+ const sale = {
+  id: "V-" + Date.now().toString().slice(-6),
+  date: new Date().toLocaleString(),
+  items: [...cart],
+  total: total,
+  cash: cash,
+  change: Math.max(0, cash - total)
+ };
+ sales.unshift(sale);
+ localStorage.setItem("lachura_sales", JSON.stringify(sales));
+ 
+ printTicket(sale);
+ cart = [];
+ update();
+ close("checkoutModal");
+ toast("Venta completada");
+};
+
+$("viewSales").onclick = () => {
+ const totalVendido = sales.reduce((s,x)=>s+x.total, 0);
+ $("salesTotalAmount").textContent = money(totalVendido);
+ $("salesList").innerHTML = sales.map(s => `
+  <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px; font-size:11px;">
+   <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+    <strong>${s.id}</strong> <span style="color:var(--muted)">${s.date}</span>
+   </div>
+   <div style="color:var(--muted); margin-bottom:5px;">${s.items.map(i => `${i.qty}x ${i.nombre}`).join(', ')}</div>
+   <div style="display:flex; justify-content:space-between; font-weight:bold;">
+    <span>Total:</span> <span>${money(s.total)}</span>
+   </div>
+  </div>
+ `).join("") || `<div class="empty-state"><p>No hay ventas registradas.</p></div>`;
+ open("salesModal");
+};
+
+$("clearSales").onclick = () => {
+ if(confirm("¿Seguro que quieres borrar todo el historial de ventas?")) {
+  sales = [];
+  localStorage.removeItem("lachura_sales");
+  $("viewSales").click(); // refresh modal
+  toast("Ventas eliminadas");
+ }
+};
+
+function printTicket(sale) {
+ const ticketHTML = `
+  <div style="font-family:monospace; width:300px; margin:0 auto; padding:20px; color:#000;">
+   <div style="text-align:center; margin-bottom:15px;">
+    <h2 style="margin:0; font-size:18px;">LA CHURA SNACK</h2>
+    <p style="margin:5px 0 0; font-size:12px;">Ticket: ${sale.id}</p>
+    <p style="margin:0; font-size:12px;">Fecha: ${sale.date}</p>
+   </div>
+   <div style="border-top:1px dashed #000; border-bottom:1px dashed #000; padding:10px 0; margin-bottom:10px;">
+    ${sale.items.map(i => `
+     <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+      <span>${i.qty}x ${i.nombre}</span>
+      <span>${Number(i.precio * i.qty).toFixed(2)}</span>
+     </div>
+    `).join('')}
+   </div>
+   <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:14px; margin-bottom:5px;">
+    <span>TOTAL:</span>
+    <span>Bs ${Number(sale.total).toFixed(2)}</span>
+   </div>
+   <div style="display:flex; justify-content:space-between; font-size:12px;">
+    <span>Efectivo:</span>
+    <span>Bs ${Number(sale.cash||sale.total).toFixed(2)}</span>
+   </div>
+   <div style="display:flex; justify-content:space-between; font-size:12px;">
+    <span>Cambio:</span>
+    <span>Bs ${Number(sale.change).toFixed(2)}</span>
+   </div>
+   <div style="text-align:center; margin-top:20px; font-size:12px;">
+    ¡Gracias por tu compra!
+   </div>
+  </div>
+ `;
+ $("printTicket").innerHTML = ticketHTML;
+ window.print();
+}
+
 load();
