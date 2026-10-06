@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto de Venta - Snack</title>
+    <!-- Aquí conectamos la pintura y el cerebro -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="contenedor">
+        <h1>🍔 Caja Registradora del Snack 🥤</h1>
+        
+        <div class="pantalla-dividida">
+            <!-- Lado izquierdo: Botones de comida -->
+            <div class="menu">
+                <h2>Menú</h2>
+                <button onclick="agregarProducto('Hamburguesa', 15)">Hamburguesa (15 Bs)</button>
+                <button onclick="agregarProducto('Papas Fritas', 10)">Papas Fritas (10 Bs)</button>
+                <button onclick="agregarProducto('Refresco', 5)">Refresco (5 Bs)</button>
+            </div>
+
+            <!-- Lado derecho: El carrito y el total -->
+            <div class="carrito">
+                <h2>🛒 Lista de compra</h2>
+                <ul id="lista-productos">
+                    <!-- Los productos irán apareciendo aquí mágicamente -->
+                </ul>
+                <h3>Total a cobrar: <span id="precio-total">0</span> Bs</h3>
+                <button class="boton-cobrar" onclick="cobrar()">Cobrar Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aquí conectamos el archivo que hace las matemáticas -->
+    <script src="script.js"></script>
+</body>
+</html>
