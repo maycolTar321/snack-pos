@@ -1,0 +1,9 @@
+{
+  "name":"La Chura Snack",
+  "short_name":"La Chura",
+  "start_url":"./index.html",
+  "display":"standalone",
+  "background_color":"#f7f3ed",
+  "theme_color":"#67180f",
+  "icons":[{"src":"logo.png","sizes":"512x512","type":"image/png"}]
+}

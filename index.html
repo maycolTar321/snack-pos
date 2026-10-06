@@ -1,178 +1,214 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#7d1b10">
-  <meta name="description" content="La Chura Snack — Empanadas & Pizzas">
-  <title>La Chura Snack | Empanadas & Pizzas</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#65170f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="La Chura Snack — Empanadas, pizzas y snacks">
+  <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <title>La Chura Snack</title>
 </head>
 <body>
-  <div class="app-shell">
+<div class="app">
 
-    <header class="topbar">
-      <div class="brand-mini">
-        <img src="logo.png" alt="La Chura Snack" class="brand-logo">
-      </div>
-      <button class="icon-btn" id="openAdmin" aria-label="Administrar productos">⚙</button>
-    </header>
-
-    <main>
-      <section class="hero">
-        <div class="hero-glow"></div>
-        <div class="hero-copy">
-          <span class="eyebrow">EMPANADAS • PIZZAS • SNACKS</span>
-          <h1>El antojo que<br><em>mereces.</em></h1>
-          <p>Pedidos rápidos, productos recién preparados y el sabor de <strong>La Chura Snack</strong>.</p>
-          <button class="hero-cta" id="scrollMenu">Ver el menú <span>↓</span></button>
-        </div>
-        <div class="hero-art">
-          <div class="hero-circle"></div>
-          <img src="logo.png" alt="" aria-hidden="true">
-        </div>
-      </section>
-
-      <section class="welcome-strip">
-        <div><span class="dot"></span><strong>Abierto para pedidos</strong></div>
-        <small>Entrega / Mesa / Para llevar</small>
-      </section>
-
-      <section class="menu-section" id="menuSection">
-        <div class="section-heading">
-          <div>
-            <span class="section-kicker">NUESTRO MENÚ</span>
-            <h2>Elige tu favorito</h2>
-          </div>
-          <span class="product-count" id="productCount">0 productos</span>
-        </div>
-
-        <div class="search-wrap">
-          <span>⌕</span>
-          <input id="searchInput" type="search" placeholder="Buscar pizza, empanada, bebida..." autocomplete="off">
-          <button id="clearSearch" class="clear-search" hidden>×</button>
-        </div>
-
-        <div class="categories" id="categories">
-          <button class="category active" data-category="Todo">Todo</button>
-          <button class="category" data-category="Pizza">Pizza</button>
-          <button class="category" data-category="Empanadas">Empanadas</button>
-          <button class="category" data-category="Snacks">Snacks</button>
-          <button class="category" data-category="Bebidas">Bebidas</button>
-        </div>
-
-        <div class="products-grid" id="menu-productos">
-          <div class="loading-card"><span class="loader"></span><p>Preparando el menú...</p></div>
-        </div>
-
-        <div class="empty-state" id="emptyState" hidden>
-          <div class="empty-icon">🍽️</div>
-          <h3>No encontramos ese antojo</h3>
-          <p>Prueba otra búsqueda o cambia de categoría.</p>
-          <button id="resetFilters">Ver todo</button>
-        </div>
-      </section>
-    </main>
-
-    <div class="cart-bar" id="cartBar" hidden>
-      <div class="cart-summary">
-        <span class="cart-badge" id="itemCount">0</span>
-        <div><small>Tu pedido</small><strong id="totalPrice">Bs 0,00</strong></div>
-      </div>
-      <button id="openCart">Ver pedido <span>→</span></button>
-    </div>
-
-    <!-- Modal de carrito -->
-    <div class="overlay" id="cartModal">
-      <div class="sheet cart-sheet">
-        <div class="sheet-head">
-          <div><span class="section-kicker">TU PEDIDO</span><h2>Revisa antes de enviar</h2></div>
-          <button class="close-btn" data-close="cartModal">×</button>
-        </div>
-        <div id="cartItems" class="cart-items"></div>
-        <div class="order-total"><span>Total</span><strong id="modalTotal">Bs 0,00</strong></div>
-        <div class="customer-box">
-          <label for="nombre-cliente">¿A nombre de quién?</label>
-          <input id="nombre-cliente" type="text" placeholder="Nombre, mesa o número de pedido">
-        </div>
-        <button class="primary-btn" id="btn-enviar">Enviar pedido a cocina <span>↗</span></button>
-        <button class="secondary-btn" data-close="cartModal">Seguir comprando</button>
+  <header class="app-header">
+    <div class="header-brand">
+      <img src="logo.png" alt="La Chura Snack">
+      <div>
+        <strong>LA CHURA</strong>
+        <span>SNACK</span>
       </div>
     </div>
+    <button class="round-icon" id="openAdmin" aria-label="Administrar">
+      <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="m19.4 15 .1.1a1.8 1.8 0 0 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 0 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3H5.7a1.8 1.8 0 0 1 0-3h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9V3.7a1.8 1.8 0 0 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 0 1 0 3h-.2a1.8 1.8 0 0 0-.9 1.7Z"/></svg>
+    </button>
+  </header>
 
-    <!-- Modal detalle producto -->
-    <div class="overlay" id="productModal">
-      <div class="sheet product-sheet">
-        <button class="close-btn floating-close" data-close="productModal">×</button>
-        <img id="detailImage" class="detail-image" src="" alt="">
-        <div class="detail-body">
-          <span class="pill" id="detailCategory">Producto</span>
-          <h2 id="detailName">Producto</h2>
-          <p id="detailDescription">Delicioso y recién preparado.</p>
-          <div class="detail-bottom">
-            <strong id="detailPrice">Bs 0,00</strong>
-            <button class="primary-btn small" id="detailAdd">Agregar <span>+</span></button>
-          </div>
-        </div>
+  <main>
+    <section class="hero-card" id="home">
+      <div class="hero-content">
+        <span class="hero-badge"><i></i> ABIERTO AHORA</span>
+        <h1>Un antojo<br><em>bien churo.</em></h1>
+        <p>Empanadas, pizzas y snacks hechos para disfrutar.</p>
+        <button class="hero-button" id="goMenu">Pedir ahora <span>→</span></button>
       </div>
-    </div>
-
-    <!-- Panel administrador / carga de productos -->
-    <div class="overlay" id="adminModal">
-      <div class="sheet admin-sheet">
-        <div class="sheet-head">
-          <div><span class="section-kicker">MODO ADMIN</span><h2>Personaliza tu menú</h2></div>
-          <button class="close-btn" data-close="adminModal">×</button>
-        </div>
-        <p class="admin-help">Puedes cargar tus propias fotos desde el celular o PC. Los productos personalizados se guardan en este dispositivo.</p>
-
-        <form id="productForm">
-          <div class="form-grid">
-            <label>Nombre
-              <input id="newName" required placeholder="Ej. Empanada de queso">
-            </label>
-            <label>Precio (Bs)
-              <input id="newPrice" required type="number" min="0" step="0.50" placeholder="12">
-            </label>
-            <label>Categoría
-              <select id="newCategory">
-                <option>Empanadas</option><option>Pizza</option><option>Snacks</option><option>Bebidas</option>
-              </select>
-            </label>
-            <label>Imagen por URL (opcional)
-              <input id="newImageUrl" placeholder="https://...">
-            </label>
-          </div>
-
-          <label class="upload-zone" for="newImage">
-            <span class="upload-icon">＋</span>
-            <strong id="uploadTitle">Cargar foto del producto</strong>
-            <small>JPG, PNG o WEBP · idealmente cuadrada</small>
-            <input id="newImage" type="file" accept="image/*">
-            <img id="imagePreview" hidden alt="Vista previa">
-          </label>
-
-          <label>Descripción
-            <textarea id="newDescription" rows="3" placeholder="Una breve descripción que invite a pedirlo..."></textarea>
-          </label>
-
-          <button class="primary-btn" type="submit">Agregar al menú <span>+</span></button>
-        </form>
-
-        <div class="admin-divider"></div>
-        <div class="admin-tools">
-          <button class="secondary-btn" id="restoreDemo">Restaurar productos de ejemplo</button>
-          <button class="danger-btn" id="clearLocal">Borrar productos locales</button>
-        </div>
+      <div class="hero-product">
+        <div class="hero-orbit"></div>
+        <img src="logo.png" alt="" aria-hidden="true">
       </div>
-    </div>
+      <div class="hero-shine"></div>
+    </section>
 
-    <div class="toast" id="toast"></div>
+    <section class="quick-row" aria-label="Información rápida">
+      <div><span class="quick-icon">⚡</span><b>Rápido</b><small>Pedidos ágiles</small></div>
+      <div><span class="quick-icon">♨</span><b>Caliente</b><small>Recién preparado</small></div>
+      <div><span class="quick-icon">♥</span><b>Churo</b><small>Hecho con cariño</small></div>
+    </section>
+
+    <section class="menu-section" id="menu">
+      <div class="section-top">
+        <div>
+          <span class="eyebrow">PARA TI</span>
+          <h2>¿Qué se te antoja?</h2>
+        </div>
+        <span class="counter" id="productCount">0</span>
+      </div>
+
+      <div class="search-box">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="searchInput" type="search" placeholder="Buscar tu favorito..." autocomplete="off">
+        <button id="clearSearch" hidden>×</button>
+      </div>
+
+      <div class="categories" id="categories">
+        <button class="category active" data-category="Todo"><span>✦</span> Todo</button>
+        <button class="category" data-category="Pizza"><span>🍕</span> Pizza</button>
+        <button class="category" data-category="Empanadas"><span>🥟</span> Empanadas</button>
+        <button class="category" data-category="Snacks"><span>🍟</span> Snacks</button>
+        <button class="category" data-category="Bebidas"><span>🥤</span> Bebidas</button>
+      </div>
+
+      <div class="featured-head">
+        <h3>Los favoritos</h3>
+        <span>Desliza y descubre</span>
+      </div>
+
+      <div class="products-grid" id="menu-productos">
+        <div class="loading"><span></span><p>Cargando sabores...</p></div>
+      </div>
+
+      <div class="empty-state" id="emptyState" hidden>
+        <div>🍽️</div>
+        <h3>No encontramos ese antojo</h3>
+        <p>Prueba con otro nombre o categoría.</p>
+        <button id="resetFilters">Ver todo</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="floating-cart" id="cartBar" hidden>
+    <button id="openCart" class="cart-main">
+      <span class="cart-icon">
+        <svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+        <b id="itemCount">0</b>
+      </span>
+      <span><small>Tu pedido</small><strong id="totalPrice">Bs 0,00</strong></span>
+      <span class="cart-arrow">→</span>
+    </button>
   </div>
 
-  <script src="script.js"></script>
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-scroll="home">
+      <svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z"/></svg>
+      <span>Inicio</span>
+    </button>
+    <button class="nav-item" data-scroll="menu">
+      <svg viewBox="0 0 24 24"><path d="M5 4h14M5 8h14M5 12h14M5 16h9"/></svg>
+      <span>Menú</span>
+    </button>
+    <button class="nav-item nav-cart" id="navCart">
+      <svg viewBox="0 0 24 24"><path d="M5 7h14l-1 13H6L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
+      <b id="navCount">0</b>
+      <span>Pedido</span>
+    </button>
+    <button class="nav-item" id="navInfo">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></svg>
+      <span>Info</span>
+    </button>
+  </nav>
+
+  <!-- Producto -->
+  <div class="modal" id="productModal">
+    <div class="sheet product-sheet">
+      <button class="modal-close" data-close="productModal">×</button>
+      <img id="detailImage" class="detail-image" src="" alt="">
+      <div class="detail-content">
+        <span class="tag" id="detailCategory">Producto</span>
+        <h2 id="detailName">Producto</h2>
+        <p id="detailDescription"></p>
+        <div class="detail-action">
+          <strong id="detailPrice">Bs 0,00</strong>
+          <button class="primary-button" id="detailAdd">Agregar <b>+</b></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pedido -->
+  <div class="modal" id="cartModal">
+    <div class="sheet order-sheet">
+      <div class="sheet-title">
+        <div><span class="eyebrow">TU PEDIDO</span><h2>Listo para pedir</h2></div>
+        <button class="modal-close" data-close="cartModal">×</button>
+      </div>
+      <div id="cartItems" class="cart-items"></div>
+      <div class="total-line"><span>Total</span><strong id="modalTotal">Bs 0,00</strong></div>
+      <label class="input-label">¿A nombre de quién?</label>
+      <input class="text-input" id="nombre-cliente" placeholder="Tu nombre, mesa o número">
+      <button class="primary-button full" id="btn-enviar">Enviar a cocina <b>↗</b></button>
+      <button class="text-button" data-close="cartModal">Seguir comprando</button>
+    </div>
+  </div>
+
+  <!-- Admin -->
+  <div class="modal" id="adminModal">
+    <div class="sheet admin-sheet">
+      <div class="sheet-title">
+        <div><span class="eyebrow">ADMINISTRACIÓN</span><h2>Tu menú</h2></div>
+        <button class="modal-close" data-close="adminModal">×</button>
+      </div>
+      <div class="admin-note">Sube fotos desde tu celular, crea productos y personaliza el catálogo. Se guardan en este dispositivo.</div>
+      <form id="productForm">
+        <div class="form-row">
+          <label>Nombre<input id="newName" required placeholder="Ej. Empanada de queso"></label>
+          <label>Precio<input id="newPrice" required type="number" min="0" step=".5" placeholder="12"></label>
+        </div>
+        <div class="form-row">
+          <label>Categoría<select id="newCategory"><option>Empanadas</option><option>Pizza</option><option>Snacks</option><option>Bebidas</option></select></label>
+          <label>Imagen URL<input id="newImageUrl" placeholder="Opcional"></label>
+        </div>
+        <label class="upload-card" for="newImage">
+          <span class="upload-symbol">＋</span>
+          <strong id="uploadTitle">Subir foto del producto</strong>
+          <small>JPG · PNG · WEBP</small>
+          <input id="newImage" type="file" accept="image/*">
+          <img id="imagePreview" hidden alt="Vista previa">
+        </label>
+        <label>Descripción<textarea id="newDescription" rows="3" placeholder="Describe el producto..."></textarea></label>
+        <button class="primary-button full" type="submit">Agregar producto <b>+</b></button>
+      </form>
+      <div class="admin-actions">
+        <button id="restoreDemo">Restaurar ejemplos</button>
+        <button id="clearLocal">Borrar mis productos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="modal" id="infoModal">
+    <div class="sheet info-sheet">
+      <button class="modal-close" data-close="infoModal">×</button>
+      <img src="logo.png" class="info-logo" alt="La Chura Snack">
+      <span class="eyebrow">LA CHURA SNACK</span>
+      <h2>Hecho para disfrutar.</h2>
+      <p>Empanadas, pizzas y snacks con una experiencia sencilla para pedir desde cualquier celular.</p>
+      <div class="info-cards">
+        <div><b>📍</b><span>Atención<br><small>Según disponibilidad</small></span></div>
+        <div><b>🕐</b><span>Pedidos<br><small>Durante horario de atención</small></span></div>
+        <div><b>💬</b><span>Contacto<br><small>Consulta por WhatsApp</small></span></div>
+      </div>
+      <button class="primary-button full" data-close="infoModal">Volver al menú</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+<script src="script.js"></script>
 </body>
 </html>
