@@ -286,6 +286,16 @@ async function refreshSharedState(silent=true){
   try{
     const data=await apiGet({action:"dashboard",staffKey:STAFF_KEY});
     if(!data.ok)throw new Error(data.error||"No autorizado");
+    const clean=(arr)=>arr?arr.filter(x=>x&&x.id&&x.id!=="undefined"&&String(x.id).trim()!==""):[];
+    data.orders=clean(data.orders);
+    data.ventas=clean(data.ventas);
+    data.movimientos=clean(data.movimientos);
+    if(data.metrics){
+      data.metrics.pedidosActivos=data.orders.length;
+      data.metrics.pendientes=data.orders.filter(o=>o.status==="pending"||o.status==="confirmed").length;
+      data.metrics.preparando=data.orders.filter(o=>o.status==="cooking").length;
+      data.metrics.listos=data.orders.filter(o=>o.status==="ready").length;
+    }
     sharedState=data;
     caja=data.caja||caja;
     sales=data.ventas||[];
@@ -438,9 +448,55 @@ let activeOrders=[];
 function normalizeRemoteOrder(o){return{id:String(o.id),date:new Date(o.createdAt||Date.now()).toLocaleTimeString("es-BO",{hour:"2-digit",minute:"2-digit"}),createdAt:o.createdAt,updatedAt:o.updatedAt,items:Array.isArray(o.items)?o.items:[],type:o.source==="pos"?"En Caja":"Pedido Online",clientName:o.cliente||"Cliente",status:o.status||"pending",token:o.token,total:Number(o.total||0)};}
 async function refreshKitchenOnline(silent=true){return refreshSharedState(silent);}
 function startRealtime(){if(realtimeTimer)return;refreshSharedState(true);realtimeTimer=setInterval(()=>refreshSharedState(true),REALTIME_INTERVAL);}
-function renderOrderCard(o){let btnText="",btnColor="",nextStatus="";if(o.status==="pending"||o.status==="confirmed"){btnText="<i class='ph ph-chef-hat'></i> Preparar";btnColor="#d97736";nextStatus="cooking"}else if(o.status==="cooking"){btnText="<i class='ph ph-check-circle'></i> Terminar";btnColor="#00b862";nextStatus="ready"}else{btnText="<i class='ph ph-package'></i> Entregar";btnColor="var(--wine)";nextStatus="delivered"}return `<div class="kds-order-card"><div class="kds-order-head"><span>#${esc(o.id)}</span><time>${esc(o.date||"")}</time></div><div class="kds-order-client"><b>${esc(o.clientName)}</b><span>${esc(o.type)} · ${money(o.total)}</span></div><div class="kds-items">${o.items.map(i=>`<div><b>${Number(i.qty)||1}x</b><span>${esc(i.nombre)}</span></div>`).join("")}</div><button class="kds-action" style="--action:${btnColor}" onclick="changeOrderStatus('${esc(o.id)}','${nextStatus}')">${btnText}</button></div>`;}
-function renderKitchen(){const pending=activeOrders.filter(o=>o.status==="pending"||o.status==="confirmed"),cooking=activeOrders.filter(o=>o.status==="cooking"),ready=activeOrders.filter(o=>o.status==="ready");$("pendingCount").textContent=pending.length;$("cookingCount").textContent=cooking.length;$("readyCount").textContent=ready.length;$("kitchenOrdersPending").innerHTML=pending.map(renderOrderCard).join("")||emptyKitchen();$("kitchenOrdersCooking").innerHTML=cooking.map(renderOrderCard).join("")||emptyKitchen();$("kitchenOrdersReady").innerHTML=ready.map(renderOrderCard).join("")||emptyKitchen();}
-function emptyKitchen(){return '<div class="kds-empty"><i class="ph ph-coffee"></i><span>Sin comandas en esta etapa.</span></div>'}
+function renderOrderCard(o){
+  let btnText="",btnColor="",nextStatus="";
+  const isOnlyDrinks = o.items.length > 0 && o.items.every(i => String(i.categoria).toLowerCase() === 'bebidas');
+  
+  if(isOnlyDrinks && o.status !== "delivered"){
+    btnText="<i class='ph ph-check-square-offset'></i> Marcar Despachado (Bebidas)";
+    btnColor="#0d8cfd";
+    nextStatus="delivered";
+  }else if(o.status==="pending"||o.status==="confirmed"){
+    btnText="<i class='ph ph-fire'></i> Empezar a Preparar";btnColor="#f26e22";nextStatus="cooking";
+  }else if(o.status==="cooking"){
+    btnText="<i class='ph ph-check-circle'></i> ¡Orden Lista!";btnColor="#00c853";nextStatus="ready";
+  }else{
+    btnText="<i class='ph ph-package'></i> Entregar al Cliente";btnColor="var(--wine)";nextStatus="delivered";
+  }
+  
+  const itemsHtml = o.items.map(i => {
+    const isDrink = String(i.categoria).toLowerCase() === 'bebidas';
+    return `<div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #f0e6dd;${isDrink?'opacity:0.6;':''}">
+      <div style="background:${isDrink?'#e2e8f0':'#ffebd2'};color:${isDrink?'#475569':'var(--wine)'};font-weight:800;border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin-right:10px;font-size:13px;">${Number(i.qty)||1}</div>
+      <span style="font-size:13px;font-weight:${isDrink?'500':'700'};color:var(--ink);">${esc(i.nombre)}</span>
+      ${isDrink ? '<i class="ph ph-brandy" style="margin-left:auto;font-size:16px;color:#94a3b8;"></i>' : ''}
+    </div>`;
+  }).join("");
+
+  return `<div class="kds-order-card" style="box-shadow:0 8px 24px rgba(0,0,0,0.06);border-radius:16px;background:#fff;border:${isOnlyDrinks?'2px dashed #94a3b8':'1px solid #eadfd6'};">
+    <div class="kds-order-head" style="padding:14px 16px;background:${isOnlyDrinks?'#f8fafc':'#fff9f2'};border-bottom:1px solid #f0e6dd;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:15px;font-weight:800;color:var(--wine);letter-spacing:-0.3px;">#${esc(o.id)}</span>
+      <time style="font-size:11px;font-weight:600;color:var(--muted);background:#fff;padding:4px 8px;border-radius:20px;border:1px solid #eadfd6;">${esc(o.date||"")}</time>
+    </div>
+    <div class="kds-order-client" style="padding:12px 16px;background:#fff;">
+      <b style="font-size:14px;color:var(--ink);margin-bottom:2px;display:block;">${esc(o.clientName)}</b>
+      <span style="font-size:11px;color:#64748b;font-weight:500;">${esc(o.type)} · ${isOnlyDrinks?'🥤 Solo Bebidas':'🍽️ Comida'}</span>
+    </div>
+    <div class="kds-items" style="padding:4px 16px 12px;background:#fff;">${itemsHtml}</div>
+    <button class="kds-action" style="background:${btnColor};color:#fff;border:0;padding:16px;font-weight:800;font-size:13px;width:100%;cursor:pointer;transition:transform 0.1s, filter 0.2s;" onclick="changeOrderStatus('${esc(o.id)}','${nextStatus}')" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">${btnText}</button>
+  </div>`;
+}
+function renderKitchen(){
+  const kdsOrders = activeOrders.filter(o => o && o.id && o.id !== "undefined" && String(o.id).trim() !== "");
+  const pending=kdsOrders.filter(o=>o.status==="pending"||o.status==="confirmed");
+  const cooking=kdsOrders.filter(o=>o.status==="cooking");
+  const ready=kdsOrders.filter(o=>o.status==="ready");
+  $("pendingCount").textContent=pending.length;$("cookingCount").textContent=cooking.length;$("readyCount").textContent=ready.length;
+  $("kitchenOrdersPending").innerHTML=pending.map(renderOrderCard).join("")||emptyKitchen();
+  $("kitchenOrdersCooking").innerHTML=cooking.map(renderOrderCard).join("")||emptyKitchen();
+  $("kitchenOrdersReady").innerHTML=ready.map(renderOrderCard).join("")||emptyKitchen();
+}
+function emptyKitchen(){return '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:200px;opacity:0.6;"><i class="ph ph-coffee" style="font-size:40px;color:#cbd5e1;margin-bottom:12px;"></i><span style="font-size:13px;font-weight:600;color:#94a3b8;">Sin comandas aquí</span></div>'}
 window.changeOrderStatus=async(id,newStatus)=>{try{const result=await apiPost({action:"updateOrderStatus",id,newStatus,staffKey:STAFF_KEY});if(!result.ok)throw new Error(result.error||"No autorizado");const last=JSON.parse(localStorage.getItem("lachura_last_order")||"null");if(last&&last.id===id){last.status=newStatus;localStorage.setItem("lachura_last_order",JSON.stringify(last))}await refreshSharedState(false);toast(newStatus==="cooking"?"Comanda en preparación":newStatus==="ready"?"Pedido listo":"Pedido entregado")}catch(e){setConnection(false,"Sin conexión");toast("No se pudo actualizar la comanda");console.error(e)}};
 $("openKitchen").onclick=async()=>{open("kitchenModal");await refreshSharedState(false)};
 
