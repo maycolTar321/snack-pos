@@ -1,204 +1,109 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#711b14">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="La Chura Snack — Plataforma de pedidos y operación gastronómica">
-  <meta name="application-name" content="La Chura Snack">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.json">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <link rel="stylesheet" href="style.css">
-  <title>La Chura Snack · Pedidos PRO</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#7b2118">
+<meta name="description" content="La Chura Snack V5 — pedidos, caja, cocina y seguimiento online">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="style.css">
+<title>La Chura Snack · V5</title>
 </head>
 <body>
-<div class="app" id="app">
-  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+<div id="app">
+<header class="topbar">
+  <div class="brand"><div class="brand-logo"><i class="ph ph-fork-knife"></i></div><div><b>LA CHURA SNACK</b><span>SMART ORDER · V5</span></div></div>
+  <div class="top-right"><div class="connection"><i></i><span id="connectionText">ONLINE</span></div><button class="circle-btn" id="adminOpen" aria-label="Centro de control"><i class="ph ph-squares-four"></i></button></div>
+</header>
 
-  <header class="app-header">
-    <button class="header-brand" data-scroll="home" aria-label="Ir al inicio">
-      <span class="brand-mark"><img src="logo.png" alt="La Chura Snack"></span>
-      <span class="brand-copy"><strong>LA CHURA</strong><small>SNACK · PEDIDOS</small></span>
-    </button>
-    <div class="header-actions">
-      <span class="connection-pill" id="connectionStatus"><i class="ph ph-cloud-check"></i><span>Conectado</span></span>
-      <button class="round-icon" id="openAdmin" aria-label="Administración"><i class="ph ph-sliders-horizontal"></i></button>
+<div class="app-shell">
+<section class="customer-view" id="customerView">
+  <div class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">LA CHURA SNACK</span>
+      <h1>Tu antojo.<br><em>Tu momento.</em></h1>
+      <p>Empanadas, pizzas, snacks y bebidas preparadas para ti.</p>
+      <button class="hero-btn" id="heroMenu">Ver menú <i class="ph ph-arrow-down"></i></button>
     </div>
-  </header>
-
-  <main>
-    <section class="hero-card" id="home">
-      <div class="hero-glow"></div><div class="hero-ring ring-1"></div><div class="hero-ring ring-2"></div>
-      <div class="hero-content">
-        <span class="hero-badge"><i class="ph ph-sparkle"></i> SABOR QUE SE NOTA</span>
-        <h1>Tu antojo.<br><em>Tu momento.</em></h1>
-        <p>Empanadas, pizzas y snacks preparados para que pedir sea tan fácil como disfrutar.</p>
-        <div class="hero-actions">
-          <button class="hero-button" id="goMenu">Ver menú <i class="ph ph-arrow-right"></i></button>
-          <span class="hero-note"><i class="ph ph-clock"></i> Atención rápida</span>
-        </div>
-      </div>
-      <div class="hero-product"><div class="hero-orbit"></div><img src="logo.png" alt="La Chura Snack" aria-hidden="true"></div>
-      <div class="hero-shine"></div>
-    </section>
-
-    <section class="quick-row" aria-label="Ventajas">
-      <div class="quick-card"><span class="quick-icon"><i class="ph ph-lightning"></i></span><span><b>Rápido</b><small>Pedido sencillo</small></span></div>
-      <div class="quick-card"><span class="quick-icon"><i class="ph ph-fire"></i></span><span><b>Caliente</b><small>Recién preparado</small></span></div>
-      <div class="quick-card"><span class="quick-icon"><i class="ph ph-star"></i></span><span><b>Churo</b><small>Sabor de la casa</small></span></div>
-    </section>
-
-    <section class="menu-section" id="menu">
-      <div class="section-top">
-        <div><span class="eyebrow">NUESTRO MENÚ</span><h2>¿Qué vas a pedir?</h2></div>
-        <span class="counter" id="productCount">0</span>
-      </div>
-
-      <div class="search-box">
-        <span class="search-icon"><i class="ph ph-magnifying-glass"></i></span>
-        <input id="searchInput" type="search" placeholder="Busca pizza, empanada, soda..." autocomplete="off">
-        <button id="clearSearch" hidden aria-label="Limpiar búsqueda"><i class="ph ph-x"></i></button>
-      </div>
-      <div class="categories" id="categories"></div>
-
-      <div class="featured-head"><div><span class="eyebrow">PARA DISFRUTAR</span><h3>Los favoritos de hoy</h3></div><span class="mini-status"><i class="ph ph-check-circle"></i> Disponibles</span></div>
-      <div class="products-grid" id="menu-productos"><div class="loading"><span></span><p>Cargando sabores...</p></div></div>
-      <div class="empty-state" id="emptyState" hidden><div><i class="ph ph-magnifying-glass"></i></div><h3>No encontramos ese producto</h3><p>Prueba otra búsqueda o revisa todas las categorías.</p><button id="resetFilters">Ver todo</button></div>
-    </section>
-  </main>
-
-  <div class="floating-cart" id="cartBar" hidden>
-    <button id="openCart" class="cart-main">
-      <span class="cart-icon"><i class="ph ph-shopping-bag-open"></i><b id="itemCount">0</b></span>
-      <span class="cart-copy"><small>Tu pedido</small><strong id="totalPrice">Bs 0,00</strong></span>
-      <span class="cart-arrow"><i class="ph ph-arrow-up-right"></i></span>
-    </button>
+    <div class="hero-art"><div class="hero-orbit"></div><i class="ph ph-hamburger"></i><span>★</span></div>
   </div>
 
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-scroll="home"><i class="ph ph-house"></i><span>Inicio</span></button>
-    <button class="nav-item" data-scroll="menu"><i class="ph ph-squares-four"></i><span>Menú</span></button>
-    <button class="nav-item nav-cart" id="navCart"><i class="ph ph-shopping-bag"></i><b id="navCount">0</b><span>Pedido</span></button>
-    <button class="nav-item" id="navInfo"><i class="ph ph-info"></i><span>Info</span></button>
-  </nav>
+  <div class="feature-row">
+    <div><i class="ph ph-lightning"></i><b>Rápido</b><small>Directo a cocina</small></div>
+    <div><i class="ph ph-fire"></i><b>Caliente</b><small>Preparado al momento</small></div>
+    <div><i class="ph ph-heart"></i><b>Chura</b><small>Hecho con cariño</small></div>
+  </div>
 
-  <!-- Producto -->
-  <div class="modal" id="productModal" aria-hidden="true"><div class="sheet product-sheet">
-    <button class="modal-close" data-close="productModal" aria-label="Cerrar"><i class="ph ph-x"></i></button>
-    <div class="detail-media"><img id="detailImage" class="detail-image" src="" alt=""><span class="detail-badge" id="detailCategory">Producto</span></div>
-    <div class="detail-content"><span class="eyebrow">DETALLE DEL PRODUCTO</span><h2 id="detailName">Producto</h2><p id="detailDescription"></p>
-      <div class="detail-action"><div><small>Precio</small><strong id="detailPrice">Bs 0,00</strong></div><button class="primary-button" id="detailAdd">Agregar <b>+</b></button></div>
-    </div>
-  </div></div>
+  <div class="section-title" id="menu"><div><span class="eyebrow">NUESTRO MENÚ</span><h2>¿Qué vas a pedir?</h2></div><span id="productCount">0</span></div>
+  <div class="search-row"><label class="search"><i class="ph ph-magnifying-glass"></i><input id="search" placeholder="Buscar empanada, pizza, bebida..."></label><button class="small-filter" id="openCategories"><i class="ph ph-sliders-horizontal"></i></button></div>
+  <div class="categories" id="categories"></div>
+  <div class="products" id="products"></div>
 
-  <!-- Pedido -->
-  <div class="modal" id="cartModal" aria-hidden="true"><div class="sheet order-sheet">
-    <div class="sheet-title"><div><span class="eyebrow">RESUMEN</span><h2>Tu pedido</h2></div><button class="modal-close" data-close="cartModal"><i class="ph ph-x"></i></button></div>
-    <div class="order-progress"><span class="active"><i class="ph ph-shopping-bag"></i> Pedido</span><i class="ph ph-caret-right"></i><span><i class="ph ph-chef-hat"></i> Cocina</span><i class="ph ph-caret-right"></i><span><i class="ph ph-check"></i> Listo</span></div>
-    <div id="cartItems" class="cart-items"></div>
-    <div class="total-line"><span>Total</span><strong id="modalTotal">Bs 0,00</strong></div>
-    <div id="clientField"><label class="input-label" for="nombre-cliente">¿A nombre de quién?</label><div class="input-wrap"><i class="ph ph-user"></i><input class="text-input" id="nombre-cliente" placeholder="Tu nombre, mesa o número"></div></div>
-    <button class="primary-button full" id="btn-enviar">Enviar a cocina <b>↗</b></button>
-    <button class="text-button" data-close="cartModal">Seguir comprando</button>
-  </div></div>
+  <section class="tracking-card">
+    <div><span class="eyebrow">¿YA HICISTE TU PEDIDO?</span><h2>Ve cómo va en cocina.</h2><p>Ingresa tu número de pedido para ver el estado.</p></div>
+    <button class="outline-btn" id="trackOpen">Seguir pedido <i class="ph ph-arrow-right"></i></button>
+  </section>
+</section>
 
-  <!-- PIN -->
-  <div class="modal modal-center" id="pinModal" aria-hidden="true"><div class="dialog-card pin-card">
-    <button class="modal-close" data-close="pinModal"><i class="ph ph-x"></i></button><div class="dialog-icon"><i class="ph ph-shield-check"></i></div>
-    <span class="eyebrow">ÁREA PRIVADA</span><h2>Acceso de propietario</h2><p>Ingresa tu PIN para administrar productos, caja y cocina.</p>
-    <div class="pin-input-wrap"><i class="ph ph-lock-key"></i><input type="password" id="adminPinInput" inputmode="numeric" maxlength="12" placeholder="PIN"></div>
-    <button class="primary-button full" id="btn-verify-pin">Entrar al panel <i class="ph ph-arrow-right"></i></button>
-  </div></div>
+<section class="pos-view hidden" id="posView">
+  <div class="pos-head">
+    <div><span class="eyebrow">PUNTO DE VENTA</span><h1>Panel del cajero</h1><p>Registra pedidos de clientes y envíalos a cocina.</p></div>
+    <button class="primary-btn" id="posNew"><i class="ph ph-plus"></i> Nueva comanda</button>
+  </div>
+  <div class="stats-grid">
+    <div class="stat"><i class="ph ph-receipt"></i><b id="statOrders">0</b><span>Pedidos activos</span></div>
+    <div class="stat"><i class="ph ph-chef-hat"></i><b id="statKitchen">0</b><span>En cocina</span></div>
+    <div class="stat"><i class="ph ph-currency-circle-dollar"></i><b id="statSales">Bs 0,00</b><span>Ventas</span></div>
+    <div class="stat"><i class="ph ph-broadcast"></i><b>ONLINE</b><span>Sincronización</span></div>
+  </div>
+  <div class="pos-layout">
+    <div><div class="section-title"><div><span class="eyebrow">COMANDAS</span><h2>Pedidos recientes</h2></div></div><div class="orders-table" id="ordersTable"></div></div>
+    <aside class="pos-cart" id="posCart">
+      <div class="panel-title"><div><span>COMANDA</span><b>Nuevo pedido</b></div><button class="circle-btn" id="posCloseCart"><i class="ph ph-x"></i></button></div>
+      <div class="meta-grid"><label>MESA<select id="posTable"><option value="1">Mesa 1</option><option value="2">Mesa 2</option><option value="3">Mesa 3</option><option value="4">Mesa 4</option><option value="5">Mesa 5</option><option value="6">Mesa 6</option><option value="7">Mesa 7</option><option value="8">Mesa 8</option><option value="takeaway">Para llevar</option></select></label><label>CLIENTE<input id="posClient" placeholder="Nombre"></label></div>
+      <div class="pos-mini-menu" id="posMiniMenu"></div>
+      <div class="pos-cart-items" id="posCartItems"></div>
+      <textarea id="posNote" placeholder="Observación del pedido..."></textarea>
+      <div class="total"><span>Total</span><b id="posTotal">Bs 0,00</b></div>
+      <button class="primary-btn full" id="posSend"><i class="ph ph-paper-plane-tilt"></i> Enviar a cocina</button>
+    </aside>
+  </div>
+</section>
 
-  <!-- Admin -->
-  <div class="modal" id="adminModal" aria-hidden="true"><div class="sheet admin-sheet">
-    <div class="sheet-title"><div><span class="eyebrow">CENTRO DE CONTROL</span><h2>Administración</h2></div><button class="modal-close" data-close="adminModal"><i class="ph ph-x"></i></button></div>
-    <div class="admin-hero"><div class="admin-hero-icon"><i class="ph ph-storefront"></i></div><div><strong>La Chura Snack</strong><span>Centro empresarial de operación</span></div><span class="live-dot"><i></i> Operativo</span></div>
+<section class="kitchen-view hidden" id="kitchenView">
+  <div class="kitchen-head"><div><span class="eyebrow light">KITCHEN DISPLAY SYSTEM</span><h1>Cocina en vivo</h1><p>Comandas ordenadas por estado.</p></div><div class="kitchen-live"><i></i> OPERANDO ONLINE</div></div>
+  <div class="kitchen-lanes">
+    <div class="k-lane"><div class="k-lane-head"><b>NUEVOS</b><span id="kPending">0</span></div><div id="kPendingList"></div></div>
+    <div class="k-lane"><div class="k-lane-head"><b>PREPARANDO</b><span id="kCooking">0</span></div><div id="kCookingList"></div></div>
+    <div class="k-lane"><div class="k-lane-head"><b>LISTOS</b><span id="kReady">0</span></div><div id="kReadyList"></div></div>
+  </div>
+</section>
 
-    <section class="enterprise-dashboard" id="enterpriseDashboard">
-      <div class="dashboard-head"><div><span class="eyebrow">RESUMEN OPERATIVO</span><h3>Panel de negocio</h3></div><span class="dashboard-date" id="dashboardDate">Hoy</span></div>
-      <div class="kpi-grid">
-        <article class="kpi-card kpi-sales"><span class="kpi-icon"><i class="ph ph-chart-line-up"></i></span><div><small>VENTAS</small><strong id="kpiSales">Bs 0,00</strong><span id="kpiSalesMeta">0 operaciones</span></div></article>
-        <article class="kpi-card"><span class="kpi-icon"><i class="ph ph-receipt"></i></span><div><small>PEDIDOS</small><strong id="kpiOrders">0</strong><span id="kpiOrdersMeta">0 en cocina</span></div></article>
-        <article class="kpi-card"><span class="kpi-icon"><i class="ph ph-package"></i></span><div><small>CATÁLOGO</small><strong id="kpiProducts">0</strong><span>productos activos</span></div></article>
-        <article class="kpi-card"><span class="kpi-icon"><i class="ph ph-wallet"></i></span><div><small>CAJA</small><strong id="kpiCash">Cerrada</strong><span id="kpiCashMeta">Sin turno abierto</span></div></article>
-      </div>
-      <div class="dashboard-grid">
-        <div class="performance-card"><div class="dashboard-subhead"><span>Actividad reciente</span><small>Últimas operaciones</small></div><div id="recentSales" class="recent-sales"></div></div>
-        <div class="status-card"><div class="dashboard-subhead"><span>Operación</span><small>Estado en vivo</small></div><div class="operation-status"><div><span class="status-dot online"></span><b id="statusKitchen">Cocina activa</b><small id="statusKitchenMeta">Sin comandas pendientes</small></div><div><span class="status-dot"></span><b id="statusCatalog">Catálogo disponible</b><small id="statusCatalogMeta">0 productos cargados</small></div><div><span class="status-dot" id="statusCashDot"></span><b id="statusCash">Caja cerrada</b><small id="statusCashMeta">Lista para apertura</small></div></div></div>
-      </div>
-      <div class="dashboard-shortcuts"><button type="button" data-admin-action="catalog"><i class="ph ph-plus-circle"></i><span><b>Nuevo producto</b><small>Actualizar catálogo</small></span></button><button type="button" data-admin-action="caja"><i class="ph ph-cash-register"></i><span><b>Abrir caja</b><small>Control financiero</small></span></button><button type="button" data-admin-action="kitchen"><i class="ph ph-chef-hat"></i><span><b>Ver cocina</b><small>Comandas en vivo</small></span></button></div>
-    </section>
-
-    <div class="admin-section"><div class="section-label"><span><i class="ph ph-package"></i> Catálogo</span><small>Productos</small></div>
-      <form id="productForm">
-        <input type="hidden" id="editingId">
-        <div class="form-row"><label>Nombre<input id="newName" required placeholder="Ej. Empanada de queso"></label><label>Precio<input id="newPrice" required type="number" min="0" step="0.5" placeholder="12"></label></div>
-        <div class="form-row"><label>Categoría<select id="newCategory"><option>Empanadas</option><option>Pizza</option><option>Snacks</option><option>Bebidas</option></select></label><label>Imagen URL<input id="newImageUrl" placeholder="Opcional"></label></div>
-        <label class="upload-card" for="newImage"><span class="upload-symbol"><i class="ph ph-image-square"></i></span><strong id="uploadTitle">Subir foto del producto</strong><small>JPG · PNG · WEBP · máx. 2.5 MB</small><input id="newImage" type="file" accept="image/*"><img id="imagePreview" hidden alt="Vista previa"></label>
-        <label>Descripción<textarea id="newDescription" rows="3" placeholder="Describe el producto..."></textarea></label>
-        <div class="form-actions"><button class="primary-button full" type="submit" id="btn-save-product">Guardar producto <i class="ph ph-check"></i></button><button class="text-button cancel-edit" type="button" id="btn-cancel-edit" hidden>Cancelar</button></div>
-      </form>
-      <div class="catalog-list" id="adminProductList"></div>
-      <div class="admin-actions"><button id="restoreDemo" type="button"><i class="ph ph-arrow-counter-clockwise"></i> Restaurar ejemplos</button><button id="clearLocal" type="button" class="danger-soft"><i class="ph ph-trash"></i> Borrar locales</button></div>
-    </div>
-
-    <div class="admin-section"><div class="section-label"><span><i class="ph ph-cash-register"></i> Operación</span><small>Punto de venta</small></div>
-      <label class="mode-switch"><input type="checkbox" id="cajaModeToggle"><span class="switch-ui"></span><span><b>Modo Caja</b><small>Convierte el botón de pedido en cobro directo.</small></span></label>
-      <div class="tool-grid"><button type="button" class="tool-card" id="openCaja"><i class="ph ph-wallet"></i><b>Caja</b><small>Ventas y movimientos</small></button><button type="button" class="tool-card kitchen-tool" id="openKitchen"><i class="ph ph-chef-hat"></i><b>Cocina</b><small>Comandas en vivo</small></button></div>
-    </div>
-
-    <div class="admin-section"><div class="section-label"><span><i class="ph ph-shield-check"></i> Seguridad</span><small>Acceso</small></div><button type="button" class="outline-button full" id="btn-change-pin"><i class="ph ph-lock-key-open"></i> Cambiar PIN</button></div>
-  </div></div>
-
-  <!-- Caja -->
-  <div class="modal" id="cajaModal" aria-hidden="true"><div class="sheet caja-sheet">
-    <div class="sheet-title"><div><span class="eyebrow">PUNTO DE VENTA</span><h2>Control de caja</h2></div><button class="modal-close" data-close="cajaModal"><i class="ph ph-x"></i></button></div>
-    <div id="cajaCerrada" class="cash-closed"><div class="cash-icon"><i class="ph ph-lock-key"></i></div><span class="eyebrow">TURNO CERRADO</span><h3>Abre la caja para comenzar</h3><p>Registra ventas, ingresos y egresos de este turno.</p><label class="input-label" for="cajaAperturaMonto">Fondo inicial (Bs)</label><div class="input-wrap"><i class="ph ph-currency-circle-dollar"></i><input type="number" id="cajaAperturaMonto" class="text-input" placeholder="100" min="0" step="0.5"></div><button class="primary-button full" id="btn-abrir-caja">Abrir caja <i class="ph ph-lock-open"></i></button></div>
-    <div id="cajaAbierta" class="cash-open" hidden>
-      <div class="cash-stats"><div><small>VENTAS</small><strong id="cajaVentasTotal">Bs 0.00</strong></div><div class="highlight"><small>CAJA ACTUAL</small><strong id="cajaSaldoActual">Bs 0.00</strong></div></div>
-      <div class="cash-actions"><button id="btn-nuevo-ingreso" class="cash-in"><i class="ph ph-plus"></i> Ingreso</button><button id="btn-nuevo-egreso" class="cash-out"><i class="ph ph-minus"></i> Egreso</button></div>
-      <div class="movement-head"><span>Movimientos del turno</span><small id="movementCount">0 movimientos</small></div><div id="cajaMovimientosList" class="movements"></div>
-      <button class="outline-button full close-cash" id="btn-cerrar-caja"><i class="ph ph-lock"></i> Cerrar turno · Corte Z</button>
-    </div>
-  </div></div>
-
-  <!-- Checkout -->
-  <div class="modal modal-center" id="checkoutModal" aria-hidden="true"><div class="dialog-card checkout-card">
-    <button class="modal-close" data-close="checkoutModal"><i class="ph ph-x"></i></button><div class="dialog-icon money"><i class="ph ph-currency-circle-dollar"></i></div><span class="eyebrow">PUNTO DE VENTA</span><h2>Cobrar venta</h2><p>Confirma el efectivo recibido para completar el ticket.</p>
-    <div class="checkout-total"><span>Total a cobrar</span><strong id="checkoutTotal">Bs 0,00</strong></div><label class="input-label" for="cashReceived">Efectivo recibido (Bs)</label><div class="cash-input"><span>Bs</span><input type="number" step="0.1" min="0" id="cashReceived" placeholder="50"></div><div class="change-card"><span>Cambio</span><strong id="checkoutChange">Bs 0,00</strong></div><button class="primary-button full" id="btn-confirm-sale">Confirmar venta <i class="ph ph-check-circle"></i></button>
-  </div></div>
-
-  <!-- Cocina -->
-  <div class="modal kitchen-modal" id="kitchenModal" aria-hidden="true"><div class="kitchen-screen">
-    <header class="kitchen-header"><div class="kitchen-title"><span class="kitchen-logo"><i class="ph ph-chef-hat"></i></span><div><span class="eyebrow">MONITOR OPERATIVO</span><h2>Comandas de cocina</h2></div></div><div class="kitchen-live"><i></i> En vivo <button class="modal-close" data-close="kitchenModal"><i class="ph ph-x"></i></button></div></header>
-    <div class="kitchen-board">
-      <section class="kanban-column pending"><div class="column-head"><div><span class="column-dot"></span><b>En espera</b></div><span id="pendingCount">0</span></div><div id="kitchenOrdersPending" class="order-stack"></div></section>
-      <section class="kanban-column cooking"><div class="column-head"><div><span class="column-dot"></span><b>En preparación</b></div><span id="cookingCount">0</span></div><div id="kitchenOrdersCooking" class="order-stack"></div></section>
-      <section class="kanban-column ready"><div class="column-head"><div><span class="column-dot"></span><b>Listos / Entregar</b></div><span id="readyCount">0</span></div><div id="kitchenOrdersReady" class="order-stack"></div></section>
-    </div>
-  </div></div>
-
-  <!-- Info -->
-  <div class="modal" id="infoModal" aria-hidden="true"><div class="sheet info-sheet">
-    <button class="modal-close" data-close="infoModal"><i class="ph ph-x"></i></button><div class="info-logo-wrap"><img src="logo.png" class="info-logo" alt="La Chura Snack"><span>LA CHURA</span></div><span class="eyebrow">BIENVENIDO</span><h2>Del menú a tu mesa.</h2><p>Elige tus favoritos, arma tu pedido y déjanos hacer el resto.</p>
-    <div class="info-cards"><div><span><i class="ph ph-lightning"></i></span><b>Pedido fácil</b><small>Selecciona, agrega y confirma.</small></div><div><span><i class="ph ph-chef-hat"></i></span><b>Cocina conectada</b><small>Tu pedido pasa directo a preparación.</small></div><div><span><i class="ph ph-heart"></i></span><b>Hecho con ganas</b><small>Un snack que se disfruta.</small></div></div><button class="primary-button full" data-close="infoModal">Volver al menú <i class="ph ph-arrow-right"></i></button>
-  </div></div>
-
-  <!-- Diálogo reutilizable -->
-  <div class="modal modal-center" id="dialogModal" aria-hidden="true"><div class="dialog-card generic-dialog">
-    <div class="dialog-icon" id="dialogIcon"><i class="ph ph-question"></i></div><span class="eyebrow" id="dialogEyebrow">CONFIRMACIÓN</span><h2 id="dialogTitle">¿Confirmar?</h2><p id="dialogMessage"></p><div class="dialog-input-wrap" id="dialogInputWrap" hidden><i class="ph ph-pencil-simple"></i><input id="dialogInput" class="text-input" autocomplete="off"></div><div class="dialog-actions"><button class="outline-button" id="dialogCancel">Cancelar</button><button class="primary-button" id="dialogConfirm">Confirmar</button></div>
-  </div></div>
-
-  <div class="toast" id="toast"><i class="ph ph-check-circle"></i><span></span></div>
+<section class="admin-view hidden" id="adminView">
+  <div class="pos-head"><div><span class="eyebrow">ADMINISTRACIÓN</span><h1>Centro de control</h1><p>Gestiona productos, caja y operación.</p></div></div>
+  <div class="admin-actions"><button data-panel="products"><i class="ph ph-package"></i><b>Productos</b><small>Catálogo y precios</small></button><button data-panel="cash"><i class="ph ph-cash-register"></i><b>Caja</b><small>Estado y ventas</small></button><button data-panel="orders"><i class="ph ph-receipt"></i><b>Pedidos</b><small>Historial</small></button><button id="syncBtn"><i class="ph ph-arrows-clockwise"></i><b>Sincronizar</b><small>Actualizar datos</small></button></div>
+  <div class="admin-panel"><div class="panel-title"><div><span>CATÁLOGO</span><b>Productos</b></div></div><form id="productForm" class="product-form"><input type="hidden" id="editId"><label>Nombre<input id="prodName" required></label><label>Precio<input id="prodPrice" type="number" min="0" step=".5" required></label><label>Categoría<select id="prodCat"><option>Empanadas</option><option>Pizza</option><option>Snacks</option><option>Bebidas</option></select></label><button class="primary-btn" type="submit">Guardar</button></form><div id="productList"></div></div>
+</section>
 </div>
-<div id="printTicket" class="print-only"></div>
+
+<nav class="bottom-nav">
+  <button class="active" data-view="customerView"><i class="ph ph-house"></i><span>Inicio</span></button>
+  <button data-view="posView"><i class="ph ph-cash-register"></i><span>Cajero</span></button>
+  <button data-view="kitchenView"><i class="ph ph-chef-hat"></i><span>Cocina</span></button>
+  <button data-view="adminView"><i class="ph ph-squares-four"></i><span>Admin</span></button>
+</nav>
+
+<div class="floating-cart" id="floatingCart"><div><small>Tu pedido</small><b id="floatCount">0 productos</b></div><strong id="floatTotal">Bs 0,00</strong><button id="openCustomerCart"><i class="ph ph-arrow-right"></i></button></div>
+
+<div class="drawer" id="customerCart"><div class="drawer-card"><div class="drawer-head"><div><span class="eyebrow">TU PEDIDO</span><h2>Listo para pedir</h2></div><button class="circle-btn" data-close="customerCart"><i class="ph ph-x"></i></button></div><div class="customer-meta"><label>MESA / REFERENCIA<select id="customerTable"><option value="1">Mesa 1</option><option value="2">Mesa 2</option><option value="3">Mesa 3</option><option value="4">Mesa 4</option><option value="5">Mesa 5</option><option value="6">Mesa 6</option><option value="7">Mesa 7</option><option value="8">Mesa 8</option><option value="takeaway">Para llevar</option></select></label><label>NOMBRE<input id="customerName" placeholder="Tu nombre"></label></div><div id="customerCartItems" class="cart-list"></div><textarea id="customerNote" placeholder="¿Alguna indicación?"></textarea><div class="total"><span>Total</span><b id="customerTotal">Bs 0,00</b></div><button class="primary-btn full" id="customerSend">Confirmar pedido</button></div></div>
+
+<div class="modal" id="trackModal"><div class="dialog"><div class="dialog-head"><div><span class="eyebrow">SEGUIMIENTO</span><h2>¿Dónde está mi pedido?</h2></div><button class="circle-btn" data-close="trackModal">×</button></div><div class="dialog-body"><label class="form-label">Número de pedido<input id="trackId" placeholder="Ej. P-ABC123"></label><button class="primary-btn full" id="trackBtn">Consultar</button><div id="trackResult"></div></div></div></div>
+<div class="modal" id="successModal"><div class="dialog success"><div class="success-icon"><i class="ph ph-check"></i></div><span class="eyebrow">PEDIDO CONFIRMADO</span><h2 id="successId">Pedido #0000</h2><p>Tu pedido fue enviado a cocina. Guarda este número para consultar su estado.</p><button class="primary-btn full" data-close="successModal">Listo</button></div></div>
+<div class="toast" id="toast"></div>
 <script src="script.js"></script>
 </body>
 </html>

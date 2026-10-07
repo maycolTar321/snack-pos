@@ -1,130 +1,114 @@
 const API_URL="https://script.google.com/macros/s/AKfycbyGXX6nPtKPfSsGEGbieM4eaIPRfdRh_WTXuZI5-c9zEZRy6PmMWeL7J6wsPxncsFdSqQ/exec";
-const STORAGE_KEY="lachura_products_v3";
-const DELETED_KEY="lachura_deleted_products_v1";
+const POLL=3000,$=id=>document.getElementById(id),money=n=>"Bs "+Number(n||0).toFixed(2).replace(".",",");
+let products=[],orders=[],customerCart=[],posCart=[],category="Todos",currentView="customerView";
+
 const demo=[
- {id:"d1",nombre:"Empanadas Fritas",precio:5,categoria:"Empanadas",imagen:"https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=85",descripcion:"Deliciosas empanadas fritas crujientes."},
- {id:"d2",nombre:"Empanadas Mixtas",precio:7,categoria:"Empanadas",imagen:"https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=800&q=85",descripcion:"Relleno mixto especial de la casa."},
- {id:"d3",nombre:"Pizza de Todo",precio:45,categoria:"Pizza",imagen:"https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=800&q=85",descripcion:"Nuestra pizza especial con todos los ingredientes."},
- {id:"d4",nombre:"Pizza Pepperoni",precio:38,categoria:"Pizza",imagen:"https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=800&q=85",descripcion:"Clásica pizza de pepperoni y extra queso."},
- {id:"d5",nombre:"Sodas",precio:8,categoria:"Bebidas",imagen:"https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=800&q=85",descripcion:"Sodas refrescantes surtidas."},
- {id:"d6",nombre:"Soda Mini",precio:4,categoria:"Bebidas",imagen:"https://images.unsplash.com/photo-1523677011781-c91d1bbe2f9e?auto=format&fit=crop&w=800&q=85",descripcion:"Ideal para acompañar tus empanadas."}
-];
-let products=[],localProducts=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]"),deletedIds=JSON.parse(localStorage.getItem(DELETED_KEY)||"[]"),cart=[],category="Todo",term="",selected=null;
-let isCajaMode=localStorage.getItem("cajaMode")==="true";
-let sales=JSON.parse(localStorage.getItem("lachura_sales")||"[]");
-let caja=JSON.parse(localStorage.getItem("lachura_caja")||'{"estado":"cerrada","saldoInicial":0,"movimientos":[]}');
-let activeOrders=JSON.parse(localStorage.getItem("lachura_orders")||"[]");
-const $=id=>document.getElementById(id);
-const money=n=>`Bs ${Number(n||0).toFixed(2)}`;
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-function fallback(cat){const m={Pizza:demo[2]?.imagen,Empanadas:demo[0]?.imagen,Snacks:demo[0]?.imagen,Bebidas:demo[4]?.imagen};return m[cat]||demo[0]?.imagen||""}
-function normalize(p,i){let cat=p.categoria||p.Categoria;const name=String(p.nombre||p.Nombre||p.name||"").toLowerCase();if(!cat){if(name.includes("pizza"))cat="Pizza";else if(name.includes("empanada"))cat="Empanadas";else if(name.includes("soda")||name.includes("bebida")||name.includes("jugo")||name.includes("coca"))cat="Bebidas";else cat="Snacks"}return{id:p.id||p.ID||`api-${i}`,nombre:p.nombre||p.Nombre||p.name||"Producto",precio:Number(p.precio??p.Precio??p.price??0),categoria:cat,imagen:p.imagen||p.Imagen||p.image||fallback(cat),descripcion:p.descripcion||p.Descripcion||"Preparado especialmente para ti."}}
-function setConnection(ok){const el=$("connectionStatus");if(!el)return;el.innerHTML=ok?'<i class="ph ph-cloud-check"></i><span>Conectado</span>':'<i class="ph ph-cloud-slash"></i><span>Modo local</span>';el.style.color=ok?'var(--green)':'var(--orange)'}
-async function load(){
- $("menu-productos").innerHTML='<div class="loading"><span></span><p>Cargando sabores...</p></div>';
- let remote=[];let online=false;
- try{const r=await fetch(API_URL,{cache:"no-store"});if(!r.ok)throw Error();const data=await r.json();remote=Array.isArray(data)?data.map(normalize):[];online=true}catch(e){remote=[]}
- setConnection(online);
- const all=[...localProducts,...remote,...demo].filter(p=>!deletedIds.includes(String(p.id)));
- const map=new Map();all.forEach(p=>{if(!map.has(String(p.id)))map.set(String(p.id),p)});products=Array.from(map.values());render();renderAdminProducts();updateCajaUI();renderCaja();
+{id:"1",nombre:"Empanada Mixta",categoria:"Empanadas",precio:8,descripcion:"Carne, queso y especias.",icon:"ph-cookie"},
+{id:"2",nombre:"Empanada de Queso",categoria:"Empanadas",precio:7,descripcion:"Queso cremoso y masa crocante.",icon:"ph-cookie"},
+{id:"3",nombre:"Pizza Familiar",categoria:"Pizza",precio:55,descripcion:"Pizza para compartir.",icon:"ph-pizza"},
+{id:"4",nombre:"Pizza Mixta",categoria:"Pizza",precio:48,descripcion:"Jamón, queso y vegetales.",icon:"ph-pizza"},
+{id:"5",nombre:"Hamburguesa Chura",categoria:"Snacks",precio:28,descripcion:"Carne, queso y salsa especial.",icon:"ph-hamburger"},
+{id:"6",nombre:"Papas Fritas",categoria:"Snacks",precio:15,descripcion:"Crocantes y recién hechas.",icon:"ph-french-fries"},
+{id:"7",nombre:"Coca Cola",categoria:"Bebidas",precio:10,descripcion:"Bebida fría.",icon:"ph-coffee"},
+{id:"8",nombre:"Soda Personal",categoria:"Bebidas",precio:6,descripcion:"Bebida refrescante.",icon:"ph-drop"}];
+
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+function toast(t){$("toast").textContent=t;$("toast").classList.add("show");clearTimeout(window.tt);window.tt=setTimeout(()=>$("toast").classList.remove("show"),2200)}
+function modal(id,on=true){$(id).classList.toggle("open",on)}
+function normalize(p){return{id:String(p.id||crypto.randomUUID?.()||Date.now()),nombre:p.nombre||p.name||"Producto",categoria:p.categoria||p.category||"Otros",precio:Number(p.precio||p.price||0),descripcion:p.descripcion||p.description||"",icon:p.icon||"ph-package",activo:p.activo!==false&&String(p.activo)!=="FALSE"}}
+async function get(action,extra={}){const u=new URL(API_URL);u.searchParams.set("action",action);Object.entries(extra).forEach(([k,v])=>u.searchParams.set(k,v));const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw Error("HTTP "+r.status);return r.json()}
+async function post(body){const r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});if(!r.ok)throw Error("HTTP "+r.status);return r.json()}
+
+async function sync(){
+ try{
+  const d=await get("dashboard");
+  if(d.ok){products=(d.products||products).map(normalize);orders=d.orders||[];$("connectionText").textContent="ONLINE";renderAll()}
+ }catch(e){$("connectionText").textContent="LOCAL";if(!products.length)products=demo;renderAll()}
 }
-function filtered(){return products.filter(p=>(category==="Todo"||String(p.categoria).toLowerCase()===category.toLowerCase())&&(!term||`${p.nombre} ${p.categoria} ${p.descripcion}`.toLowerCase().includes(term.toLowerCase())))}
-function categoryIcon(c){return({Pizza:"🍕",Empanadas:"🥟",Snacks:"🍟",Bebidas:"🥤"}[c]||"✨")}
-function render(){const list=filtered();$("productCount").textContent=list.length;$("emptyState").hidden=!!list.length;$("menu-productos").innerHTML=list.map((p,i)=>`<article class="product-card" data-id="${esc(p.id)}" style="animation-delay:${Math.min(i*35,210)}ms"><div class="product-image"><img loading="lazy" src="${esc(p.imagen)}" alt="${esc(p.nombre)}" onerror="this.src='${fallback(p.categoria)}'"><span class="product-tag">${esc(p.categoria)}</span><button class="product-add" data-add="${esc(p.id)}" aria-label="Agregar"><i class="ph ph-plus"></i></button></div><div class="product-body"><h3>${esc(p.nombre)}</h3><p>${esc(p.descripcion)}</p><div class="product-price">${money(p.precio)}</div></div></article>`).join("");const cats=Array.from(new Set(products.map(p=>p.categoria)));$("categories").innerHTML=`<button class="category ${category==='Todo'?'active':''}" data-category="Todo"><span><i class="ph ph-squares-four"></i></span>Todo</button>${cats.map(c=>`<button class="category ${category===c?'active':''}" data-category="${esc(c)}"><span>${categoryIcon(c)}</span>${esc(c)}</button>`).join("")}`}
-function add(p){const x=cart.find(i=>String(i.id)===String(p.id));x?x.qty++:cart.push({...p,qty:1});update();toast("Agregado a tu pedido");pulseCart()}
-function pulseCart(){const bar=$("cartBar");if(bar.hidden)return;bar.animate([{transform:"translateX(-50%) scale(1)"},{transform:"translateX(-50%) scale(1.025)"},{transform:"translateX(-50%) scale(1)"}],{duration:280})}
-function update(){const count=cart.reduce((s,x)=>s+x.qty,0),total=cart.reduce((s,x)=>s+x.precio*x.qty,0);$("itemCount").textContent=count;$("navCount").textContent=count;$("totalPrice").textContent=money(total);$("modalTotal").textContent=money(total);$("cartBar").hidden=count===0;$("cartItems").innerHTML=cart.length?cart.map(x=>`<div class="cart-row"><img src="${esc(x.imagen)}" alt=""><div class="cart-info"><strong>${esc(x.nombre)}</strong><small>${money(x.precio)} c/u</small></div><div class="qty"><button data-qty="${esc(x.id)}" data-delta="-1">−</button><strong>${x.qty}</strong><button data-qty="${esc(x.id)}" data-delta="1">+</button></div></div>`).join(""):`<div class="empty-state"><div><i class="ph ph-shopping-bag"></i></div><h3>Tu pedido está vacío</h3><p>Agrega algo delicioso del menú.</p></div>`}
-function open(id){const el=$(id);if(!el)return;el.classList.add("show");el.setAttribute("aria-hidden","false");document.body.style.overflow="hidden"}
-function close(id){const el=$(id);if(!el)return;el.classList.remove("show");el.setAttribute("aria-hidden","true");if(!document.querySelector(".modal.show"))document.body.style.overflow=""}
-function toast(msg){const t=$("toast");t.querySelector("span").textContent=msg;t.classList.add("show");clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.remove("show"),2100)}
-function showProduct(p){selected=p;$("detailImage").src=p.imagen;$("detailImage").alt=p.nombre;$("detailCategory").textContent=p.categoria;$("detailName").textContent=p.nombre;$("detailDescription").textContent=p.descripcion;$("detailPrice").textContent=money(p.precio);open("productModal")}
-function customDialog({title,message,type="confirm",value="",confirmText="Confirmar",placeholder="",danger=false}){return new Promise(resolve=>{const modal=$("dialogModal"),inputWrap=$("dialogInputWrap"),input=$("dialogInput");$("dialogTitle").textContent=title;$("dialogMessage").textContent=message||"";$("dialogConfirm").textContent=confirmText;$("dialogConfirm").classList.toggle("danger-confirm",danger);$("dialogEyebrow").textContent=type==="input"?"INGRESAR DATO":"CONFIRMACIÓN";$("dialogIcon").innerHTML=type==="input"?'<i class="ph ph-pencil-simple"></i>':danger?'<i class="ph ph-warning"></i>':'<i class="ph ph-question"></i>';inputWrap.hidden=type!=="input";input.value=value;input.placeholder=placeholder;open("dialogModal");const done=result=>{close("dialogModal");$("dialogConfirm").classList.remove("danger-confirm");$("dialogConfirm").onclick=null;$("dialogCancel").onclick=null;resolve(result)};$("dialogCancel").onclick=()=>done(null);$("dialogConfirm").onclick=()=>done(type==="input"?input.value.trim():true);if(type==="input")setTimeout(()=>input.focus(),100)})}
-function confirmBox(title,message,opts={}){return customDialog({title,message,...opts})}
-
-document.addEventListener("click",e=>{const addBtn=e.target.closest("[data-add]");if(addBtn){const p=products.find(x=>String(x.id)===String(addBtn.dataset.add));if(p)add(p);return}const q=e.target.closest("[data-qty]");if(q){const x=cart.find(i=>String(i.id)===String(q.dataset.qty));if(x){x.qty+=Number(q.dataset.delta);if(x.qty<=0)cart=cart.filter(i=>String(i.id)!==String(x.id));update()}return}const card=e.target.closest(".product-card");if(card&&!e.target.closest(".product-add")){const p=products.find(x=>String(x.id)===String(card.dataset.id));if(p)showProduct(p);return}const c=e.target.closest("[data-close]");if(c)close(c.dataset.close)});
-$("goMenu").onclick=()=>$("menu").scrollIntoView({behavior:"smooth",block:"start"});$("openCart").onclick=()=>open("cartModal");$("navCart").onclick=()=>open("cartModal");$("navInfo").onclick=()=>open("infoModal");
-document.querySelectorAll(".nav-item[data-scroll],.header-brand").forEach(b=>b.onclick=()=>{const target=b.dataset.scroll;$(target).scrollIntoView({behavior:"smooth",block:"start"});document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.scroll===target))});
-$("searchInput").oninput=e=>{term=e.target.value;$("clearSearch").hidden=!term;render()};$("clearSearch").onclick=()=>{$("searchInput").value="";term="";$("clearSearch").hidden=true;render()};$("resetFilters").onclick=()=>{$("searchInput").value="";term="";category="Todo";$("clearSearch").hidden=true;render()};$("detailAdd").onclick=()=>{if(selected){add(selected);close("productModal")}};
-document.addEventListener("click",e=>{const cat=e.target.closest("[data-category]");if(cat){category=cat.dataset.category;render()}});document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m && m.id!=="dialogModal")close(m.id)}));
-
-// Administración
-$("openAdmin").onclick=()=>{$("adminPinInput").value="";open("pinModal");setTimeout(()=>$("adminPinInput").focus(),100)};
-$("btn-verify-pin").onclick=()=>{const currentPin=localStorage.getItem("admin_pin")||"1234";if($("adminPinInput").value===currentPin){close("pinModal");open("adminModal")}else{toast("PIN incorrecto")}};
-$("adminPinInput").addEventListener("keydown",e=>{if(e.key==="Enter")$("btn-verify-pin").click()});
-$("btn-change-pin").onclick=async()=>{const v=await customDialog({title:"Cambiar PIN",message:"Escribe el nuevo PIN numérico que usarás para entrar al panel.",type:"input",placeholder:"Nuevo PIN",confirmText:"Guardar PIN"});if(v){if(!/^\d{4,12}$/.test(v))return toast("Usa entre 4 y 12 números");localStorage.setItem("admin_pin",v);toast("PIN actualizado correctamente")}};
-$("newImage").onchange=e=>{const f=e.target.files[0];if(!f)return;if(f.size>2500000){toast("La foto debe pesar menos de 2.5 MB");e.target.value="";return}const r=new FileReader();r.onload=()=>{$("imagePreview").src=r.result;$("imagePreview").hidden=false;$("uploadTitle").textContent=f.name};r.readAsDataURL(f)};
-function renderAdminProducts(){$("adminProductList").innerHTML=products.map(p=>`<div class="catalog-item"><img src="${esc(p.imagen)}" alt="" onerror="this.src='${fallback(p.categoria)}'"><div class="catalog-meta"><b>${esc(p.nombre)}</b><span>${money(p.precio)} · ${esc(p.categoria)}</span></div><button type="button" class="icon-action" onclick="editProduct('${esc(p.id)}')" aria-label="Editar"><i class="ph ph-pencil-simple"></i></button><button type="button" class="icon-action danger" onclick="deleteProduct('${esc(p.id)}')" aria-label="Eliminar"><i class="ph ph-trash"></i></button></div>`).join("")||'<p style="font-size:11px;color:var(--muted);text-align:center;padding:15px">No hay productos.</p>'}
-window.editProduct=id=>{const p=products.find(x=>String(x.id)===String(id));if(!p)return;$("editingId").value=p.id;$("newName").value=p.nombre;$("newPrice").value=p.precio;$("newCategory").value=p.categoria;$("newDescription").value=p.descripcion;$("newImageUrl").value=p.imagen||"";if(p.imagen){$("imagePreview").src=p.imagen;$("imagePreview").hidden=false;$("uploadTitle").textContent="Cambiar foto"}$("btn-cancel-edit").hidden=false;$("btn-save-product").innerHTML='Actualizar producto <i class="ph ph-check"></i>';$("productForm").scrollIntoView({behavior:"smooth",block:"start"})};
-window.deleteProduct=async id=>{const p=products.find(x=>String(x.id)===String(id));if(!p)return;const ok=await confirmBox("Eliminar producto",`¿Quieres quitar “${p.nombre}” del catálogo?`,{confirmText:"Eliminar",danger:true});if(!ok)return;localProducts=localProducts.filter(x=>String(x.id)!==String(id));if(!deletedIds.includes(String(id)))deletedIds.push(String(id));localStorage.setItem(STORAGE_KEY,JSON.stringify(localProducts));localStorage.setItem(DELETED_KEY,JSON.stringify(deletedIds));load();toast("Producto eliminado")};
-$("btn-cancel-edit").onclick=()=>{$("productForm").reset();$("editingId").value="";$("imagePreview").hidden=true;$("uploadTitle").textContent="Subir foto del producto";$("btn-cancel-edit").hidden=true;$("btn-save-product").innerHTML='Guardar producto <i class="ph ph-check"></i>'};
-$("productForm").onsubmit=e=>{e.preventDefault();const id=$("editingId").value,file=$("newImage").files[0],url=$("newImageUrl").value.trim();const save=img=>{const p={id:id||"local-"+Date.now(),nombre:$("newName").value.trim(),precio:Number($("newPrice").value),categoria:$("newCategory").value,imagen:img||fallback($("newCategory").value),descripcion:$("newDescription").value.trim()||"Preparado especialmente para ti."};deletedIds=deletedIds.filter(x=>String(x)!==String(p.id));if(id){const idx=localProducts.findIndex(x=>String(x.id)===String(id));if(idx>=0)localProducts[idx]=p;else localProducts.push(p)}else localProducts.unshift(p);localStorage.setItem(STORAGE_KEY,JSON.stringify(localProducts));localStorage.setItem(DELETED_KEY,JSON.stringify(deletedIds));$("btn-cancel-edit").click();load();toast(id?"Producto actualizado":"Producto agregado")};if(file){const r=new FileReader();r.onload=()=>save(r.result);r.readAsDataURL(file)}else save(url)};
-$("restoreDemo").onclick=async()=>{const ok=await confirmBox("Restaurar catálogo", "Esto limpiará los productos locales y mostrará nuevamente los ejemplos.",{confirmText:"Restaurar"});if(!ok)return;localProducts=[];deletedIds=[];localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(DELETED_KEY);load();toast("Ejemplos restaurados")};
-$("clearLocal").onclick=async()=>{if(!localProducts.length)return toast("No tienes productos locales");const ok=await confirmBox("Borrar productos locales","Se eliminarán los productos creados manualmente en este dispositivo.",{confirmText:"Borrar",danger:true});if(!ok)return;localProducts=[];localStorage.removeItem(STORAGE_KEY);load();toast("Productos locales eliminados")};
-
-// Cliente / caja
-function updateCajaUI(){isCajaMode=localStorage.getItem("cajaMode")==="true";$("cajaModeToggle").checked=isCajaMode;$("btn-enviar").innerHTML=isCajaMode?'Cobrar venta <b>Bs</b>':'Enviar a cocina <b>↗</b>';$("clientField").hidden=isCajaMode}
-$("cajaModeToggle").onchange=e=>{isCajaMode=e.target.checked;localStorage.setItem("cajaMode",isCajaMode);updateCajaUI();toast(isCajaMode?"Modo Caja activado":"Modo Cliente activado")};
-$("btn-enviar").onclick=async()=>{if(!cart.length)return toast("Agrega productos primero");if(isCajaMode){$("checkoutTotal").textContent=money(cart.reduce((s,x)=>s+x.precio*x.qty,0));$("cashReceived").value="";$("checkoutChange").textContent="Bs 0.00";close("cartModal");open("checkoutModal");setTimeout(()=>$("cashReceived").focus(),100);return}const cliente=$("nombre-cliente").value.trim();if(!cliente){$("nombre-cliente").focus();return toast("Escribe tu nombre o mesa")}const btn=$("btn-enviar");btn.disabled=true;btn.innerHTML='Enviando…';const total=cart.reduce((s,x)=>s+x.precio*x.qty,0),orden=cart.flatMap(x=>Array(x.qty).fill(x.nombre)).join(", ");saveOrderToKitchen({clientName:cliente,items:cart},true);try{await fetch(API_URL,{method:"POST",body:JSON.stringify({cliente,orden,total})});cart=[];update();$("nombre-cliente").value="";close("cartModal");toast("¡Pedido enviado a cocina!")}catch(e){toast("Pedido guardado en cocina local. Revisa la conexión.")}finally{btn.disabled=false;updateCajaUI()}};
-$("cashReceived").oninput=e=>{const total=cart.reduce((s,x)=>s+x.precio*x.qty,0),cash=Number(e.target.value),change=cash-total;$("checkoutChange").textContent=money(Math.max(0,change));$("checkoutChange").style.color=change<0?'var(--red)':'var(--wine)'};
-$("btn-confirm-sale").onclick=()=>{const total=cart.reduce((s,x)=>s+x.precio*x.qty,0),cash=Number($("cashReceived").value);if(cash<total)return toast("El efectivo es menor al total");const sale={id:"V-"+Date.now().toString().slice(-6),date:new Date().toLocaleString(),items:[...cart],total,cash,change:Math.max(0,cash-total),clientName:"Caja Local"};sales.unshift(sale);localStorage.setItem("lachura_sales",JSON.stringify(sales));if(caja.estado==="abierta"){caja.movimientos.push({tipo:"Venta",monto:total,detalle:`Ticket ${sale.id} · ${sale.items.map(i=>`${i.qty}x ${i.nombre}`).join(", ")}`,hora:new Date().toLocaleTimeString()});localStorage.setItem("lachura_caja",JSON.stringify(caja))}saveOrderToKitchen(sale,false);printTicket(sale);cart=[];update();close("checkoutModal");renderCaja();toast("Venta completada")};
-
-// Caja
-function renderCaja(){if(caja.estado==="cerrada"){$("cajaCerrada").hidden=false;$("cajaAbierta").hidden=true;return}$("cajaCerrada").hidden=true;$("cajaAbierta").hidden=false;const ventas=caja.movimientos.filter(m=>m.tipo==="Venta").reduce((s,x)=>s+x.monto,0),ingresos=caja.movimientos.filter(m=>m.tipo==="Ingreso").reduce((s,x)=>s+x.monto,0),egresos=caja.movimientos.filter(m=>m.tipo==="Egreso").reduce((s,x)=>s+x.monto,0),actual=caja.saldoInicial+ventas+ingresos-egresos;$("cajaVentasTotal").textContent=money(ventas);$("cajaSaldoActual").textContent=money(actual);$("movementCount").textContent=`${caja.movimientos.length} movimiento${caja.movimientos.length===1?'':'s'}`;$("cajaMovimientosList").innerHTML=[...caja.movimientos].reverse().map(m=>`<div class="movement ${m.tipo==='Egreso'?'out':''}"><span class="movement-icon"><i class="ph ${m.tipo==='Egreso'?'ph-arrow-down-left':m.tipo==='Ingreso'?'ph-arrow-up-right':'ph-receipt'}"></i></span><div class="movement-meta"><b>${esc(m.tipo)} · ${esc(m.hora)}</b><span>${esc(m.detalle)}</span></div><strong>${m.tipo==='Egreso'?'-':'+'}${money(m.monto)}</strong></div>`).join("")||'<p style="font-size:10px;color:var(--muted);text-align:center;padding:20px">No hay movimientos en este turno.</p>'}
-$("btn-abrir-caja").onclick=()=>{const monto=Number($("cajaAperturaMonto").value);if(monto<0)return; caja={estado:"abierta",saldoInicial:monto,movimientos:[]};localStorage.setItem("lachura_caja",JSON.stringify(caja));$("cajaAperturaMonto").value="";renderCaja();toast("Caja abierta correctamente")};
-$("btn-cerrar-caja").onclick=async()=>{const ok=await confirmBox("Cerrar turno","Se cerrará la caja y se reiniciarán los movimientos del turno actual.",{confirmText:"Cerrar turno",danger:true});if(!ok)return;caja={estado:"cerrada",saldoInicial:0,movimientos:[]};localStorage.setItem("lachura_caja",JSON.stringify(caja));renderCaja();toast("Turno cerrado")};
-async function addMovement(tipo){const monto=await customDialog({title:tipo==="Ingreso"?"Nuevo ingreso":"Nuevo egreso",message:"Ingresa el monto en bolivianos.",type:"input",placeholder:"Ej. 50",confirmText:"Continuar"});if(monto===null)return;const n=Number(monto);if(!n||n<0)return toast("Ingresa un monto válido");const detalle=await customDialog({title:"Detalle del movimiento",message:"Escribe el motivo o referencia.",type:"input",placeholder:tipo==="Ingreso"?"Venta externa / aporte":"Proveedor / compra",confirmText:"Guardar"});if(detalle===null)return;caja.movimientos.push({tipo,monto:n,detalle:detalle||"Movimiento manual",hora:new Date().toLocaleTimeString()});localStorage.setItem("lachura_caja",JSON.stringify(caja));renderCaja();toast(`${tipo} registrado`)}
-$("btn-nuevo-ingreso").onclick=()=>addMovement("Ingreso");$("btn-nuevo-egreso").onclick=()=>addMovement("Egreso");$("openCaja").onclick=()=>{renderCaja();open("cajaModal")};
-
-// Cocina
-function saveOrderToKitchen(sale,isClient){const order={id:sale.id||"P-"+Date.now().toString().slice(-6),date:new Date().toLocaleTimeString(),items:sale.items||[...cart],type:isClient?"Pedido Online":"En Caja",clientName:sale.clientName||"Cliente",status:"pending"};activeOrders.push(order);localStorage.setItem("lachura_orders",JSON.stringify(activeOrders));renderKitchen()}
-function renderOrderCard(o){let btnText,nextStatus;if(o.status==="pending"){btnText="Preparar";nextStatus="cooking"}else if(o.status==="cooking"){btnText="Terminar";nextStatus="ready"}else{btnText="Entregar";nextStatus="done"}return `<article class="order-card"><div class="order-card-head"><b>#${esc(o.id)}</b><small>${esc(o.date)}</small></div><div class="order-client">${esc(o.type)} · ${esc(o.clientName)}</div><div class="order-items">${o.items.map(i=>`<div class="order-item"><b>${i.qty}×</b> ${esc(i.nombre)}</div>`).join("")}</div><button class="order-action" onclick="changeOrderStatus('${esc(o.id)}','${nextStatus}')">${btnText} <i class="ph ph-arrow-right"></i></button></article>`}
-function renderKitchen(){const pending=activeOrders.filter(o=>o.status==="pending"),cooking=activeOrders.filter(o=>o.status==="cooking"),ready=activeOrders.filter(o=>o.status==="ready");$("pendingCount").textContent=pending.length;$("cookingCount").textContent=cooking.length;$("readyCount").textContent=ready.length;$("kitchenOrdersPending").innerHTML=pending.map(renderOrderCard).join("")||emptyKitchen();$("kitchenOrdersCooking").innerHTML=cooking.map(renderOrderCard).join("")||emptyKitchen();$("kitchenOrdersReady").innerHTML=ready.map(renderOrderCard).join("")||emptyKitchen()}
-function emptyKitchen(){return '<div style="text-align:center;color:#9b8f88;font-size:10px;padding:30px 10px">Sin comandas en esta etapa.</div>'}
-window.changeOrderStatus=(id,newStatus)=>{const idx=activeOrders.findIndex(o=>String(o.id)===String(id));if(idx<0)return;if(newStatus==="done")activeOrders.splice(idx,1);else activeOrders[idx].status=newStatus;localStorage.setItem("lachura_orders",JSON.stringify(activeOrders));renderKitchen();toast(newStatus==="cooking"?"Comanda en preparación":newStatus==="ready"?"Pedido listo":"Pedido entregado")};
-$("openKitchen").onclick=()=>{renderKitchen();open("kitchenModal")};
-window.addEventListener("storage",e=>{if(e.key==="lachura_orders"){activeOrders=JSON.parse(e.newValue||"[]");renderKitchen()}if(e.key==="lachura_caja"){caja=JSON.parse(e.newValue||'{"estado":"cerrada","saldoInicial":0,"movimientos":[]}');renderCaja()}if(e.key===STORAGE_KEY){localProducts=JSON.parse(e.newValue||"[]");load()}});
-
-function printTicket(sale){$("printTicket").innerHTML=`<div style="font-family:monospace;width:300px;margin:0 auto;padding:20px;color:#000"><div style="text-align:center"><h2 style="margin:0">LA CHURA SNACK</h2><p style="margin:4px 0;font-size:12px">TICKET ${sale.id}</p><p style="margin:0;font-size:11px">${sale.date}</p></div><div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:10px 0;margin:10px 0">${sale.items.map(i=>`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>${i.qty}x ${esc(i.nombre)}</span><span>Bs ${Number(i.precio*i.qty).toFixed(2)}</span></div>`).join("")}</div><div style="display:flex;justify-content:space-between;font-weight:bold"><span>TOTAL</span><span>${money(sale.total)}</span></div><div style="display:flex;justify-content:space-between;font-size:12px;margin-top:5px"><span>Efectivo</span><span>${money(sale.cash||sale.total)}</span></div><div style="display:flex;justify-content:space-between;font-size:12px"><span>Cambio</span><span>${money(sale.change)}</span></div><p style="text-align:center;margin-top:20px;font-size:11px">¡Gracias por tu compra!</p></div>`;window.print()}
-
-update();updateCajaUI();renderKitchen();renderCaja();load();
-
-/* ===== ENTERPRISE DASHBOARD ===== */
-function renderDashboard(){
-  const totalSales=sales.reduce((sum,s)=>sum+Number(s.total||0),0);
-  const orderCount=sales.length;
-  const activeCount=activeOrders.length;
-  const openCash=caja.estado==='abierta';
-  const salesEl=$("kpiSales"),ordersEl=$("kpiOrders"),productsEl=$("kpiProducts"),cashEl=$("kpiCash");
-  if(!salesEl)return;
-  salesEl.textContent=money(totalSales);
-  $("kpiSalesMeta").textContent=`${orderCount} operación${orderCount===1?'':'es'} registrada${orderCount===1?'':'s'}`;
-  ordersEl.textContent=activeCount;
-  $("kpiOrdersMeta").textContent=`${activeOrders.filter(o=>o.status!=='ready').length} en preparación`;
-  productsEl.textContent=products.length;
-  cashEl.textContent=openCash?money(caja.saldoInicial):'Cerrada';
-  $("kpiCashMeta").textContent=openCash?'Turno abierto':'Sin turno abierto';
-  $("dashboardDate").textContent=new Date().toLocaleDateString('es-BO',{day:'2-digit',month:'short',year:'numeric'});
-  $("statusKitchen").textContent=activeCount?`Cocina · ${activeCount} comanda${activeCount===1?'':'s'}`:'Cocina activa';
-  $("statusKitchenMeta").textContent=activeCount?'Pedidos en seguimiento':'Sin comandas pendientes';
-  $("statusCatalog").textContent=products.length?'Catálogo disponible':'Catálogo vacío';
-  $("statusCatalogMeta").textContent=`${products.length} producto${products.length===1?'':'s'} cargado${products.length===1?'':'s'}`;
-  $("statusCash").textContent=openCash?'Caja abierta':'Caja cerrada';
-  $("statusCashMeta").textContent=openCash?`Saldo inicial ${money(caja.saldoInicial)}`:'Lista para apertura';
-  $("statusCashDot").className=`status-dot ${openCash?'online':''}`;
-  const recent=sales.slice(0,6);
-  $("recentSales").innerHTML=recent.length?recent.map(s=>`<div class="recent-sale"><span class="recent-sale-icon"><i class="ph ph-receipt"></i></span><div class="recent-sale-main"><b>${esc(s.id||'Venta')}</b><small>${esc(s.date||'')} · ${esc(s.clientName||'Caja Local')}</small></div><strong>${money(s.total)}</strong></div>`).join(''):'<div class="recent-empty"><i class="ph ph-chart-line-up"></i><br>Las ventas aparecerán aquí.</div>';
+function renderAll(){renderCategories();renderProducts();renderCustomerCart();renderPosMini();renderPosCart();renderOrders();renderKitchen();renderAdminProducts()}
+function renderCategories(){const c=["Todos",...new Set(products.map(p=>p.categoria))];$("categories").innerHTML=c.map(x=>`<button class="${x===category?"active":""}" onclick="setCat('${esc(x)}')">${esc(x)}</button>`).join("")}
+function setCat(x){category=x;renderCategories();renderProducts()}
+function renderProducts(){
+ const q=$("search").value.toLowerCase(),list=products.filter(p=>p.activo&&(category==="Todos"||p.categoria===category)&&(p.nombre+" "+p.descripcion).toLowerCase().includes(q));
+ $("productCount").textContent=list.length;
+ $("products").innerHTML=list.map(p=>`<article class="product"><div class="product-image"><span class="badge">${esc(p.categoria)}</span><i class="ph ${p.icon}"></i></div><div class="product-body"><h3>${esc(p.nombre)}</h3><p>${esc(p.descripcion)}</p><div class="product-foot"><b class="price">${money(p.precio)}</b><button class="add" onclick="addCustomer('${p.id}')"><i class="ph ph-plus"></i></button></div></div></article>`).join("")}
+function addCustomer(id){addTo(customerCart,id);renderCustomerCart();$("floatingCart").style.display="flex";toast("Producto agregado")}
+function addTo(arr,id){const p=products.find(x=>x.id===String(id));if(!p)return;const i=arr.find(x=>String(x.id)===String(id));i?i.qty++:arr.push({...p,qty:1})}
+function changeArr(arr,id,d){const i=arr.find(x=>String(x.id)===String(id));if(!i)return;i.qty+=d;if(i.qty<=0)arr.splice(arr.indexOf(i),1)}
+function renderCustomerCart(){
+ const total=customerCart.reduce((s,x)=>s+x.precio*x.qty,0),count=customerCart.reduce((s,x)=>s+x.qty,0);
+ $("customerTotal").textContent=money(total);$("floatTotal").textContent=money(total);$("floatCount").textContent=count+" producto"+(count===1?"":"s");
+ $("customerCartItems").innerHTML=customerCart.length?customerCart.map(x=>line(x,"customer")) .join(""):`<div class="empty"><p>Tu pedido está vacío.</p></div>`;
 }
+function line(x,type){const fn=type==="customer"?`changeCustomer('${x.id}',`:`changePos('${x.id}',`;return `<div class="cart-line"><div><b>${esc(x.nombre)}</b><small>${money(x.precio)} c/u</small><div class="q"><button onclick="${fn}-1)">−</button><span>${x.qty}</span><button onclick="${fn}1)">+</button></div></div><b>${money(x.precio*x.qty)}</b></div>`}
+function changeCustomer(id,d){changeArr(customerCart,String(id),d);renderCustomerCart()}
+function renderPosMini(){$("posMiniMenu").innerHTML=products.slice(0,8).map(p=>`<button class="mini-product" onclick="addPos('${p.id}')"><b>${esc(p.nombre)}</b><span>${money(p.precio)} · +</span></button>`).join("")}
+function addPos(id){addTo(posCart,id);renderPosCart();openPosCart();toast("Agregado a comanda")}
+function changePos(id,d){changeArr(posCart,String(id),d);renderPosCart()}
+function renderPosCart(){const total=posCart.reduce((s,x)=>s+x.precio*x.qty,0);$("posTotal").textContent=money(total);$("posCartItems").innerHTML=posCart.map(x=>line(x,"pos")).join("")||`<div class="empty"><p>Agrega productos para crear la comanda.</p></div>`}
+function openPosCart(){$("posCart").classList.add("open")}
+function renderOrders(){
+ const active=orders.filter(o=>!["delivered","cancelled"].includes(o.status));
+ const sales=orders.filter(o=>o.status!=="cancelled").reduce((s,o)=>s+Number(o.total||0),0);
+ $("statOrders").textContent=active.length;$("statKitchen").textContent=active.filter(o=>["pending","confirmed","cooking"].includes(o.status)).length;$("statSales").textContent=money(sales);
+ $("ordersTable").innerHTML=orders.slice(0,20).map(o=>`<div class="order-row"><div><b class="order-number">#${esc(o.id)}</b><small>${o.table==="takeaway"?"Para llevar":"Mesa "+esc(o.table||"-")}</small></div><div><b>${esc(o.client||"Cliente")}</b><small>${(o.items||[]).length} líneas · ${money(o.total)}</small></div><div><span class="order-status">${labelStatus(o.status)}</span></div><button class="order-action" onclick="changeOrder('${esc(o.id)}','${next(o.status)}')">${actionStatus(o.status)}</button></div>`).join("")||`<div class="empty"><p>No hay pedidos registrados.</p></div>`}
+function labelStatus(s){return({pending:"Recibido",confirmed:"Confirmado",cooking:"Preparando",ready:"Listo",delivered:"Entregado",cancelled:"Cancelado"}[s]||s||"—")}
+function next(s){return s==="pending"||s==="confirmed"?"cooking":s==="cooking"?"ready":"delivered"}
+function actionStatus(s){return s==="ready"?"Entregar":s==="cooking"?"Marcar listo":"Preparar"}
+async function changeOrder(id,status){try{await post({action:"updateOrder",id,status});toast("Estado actualizado");sync()}catch(e){toast("No se pudo actualizar")}}
+function renderKitchen(){
+ const map={pending:$("kPendingList"),cooking:$("kCookingList"),ready:$("kReadyList")};
+ ["pending","cooking","ready"].forEach(k=>map[k].innerHTML="");
+ const p=orders.filter(o=>["pending","confirmed"].includes(o.status)),c=orders.filter(o=>o.status==="cooking"),r=orders.filter(o=>o.status==="ready");
+ $("kPending").textContent=p.length;$("kCooking").textContent=c.length;$("kReady").textContent=r.length;
+ p.forEach(o=>map.pending.innerHTML+=kcard(o));c.forEach(o=>map.cooking.innerHTML+=kcard(o));r.forEach(o=>map.ready.innerHTML+=kcard(o));
+}
+function kcard(o){const n=next(o.status),a=actionStatus(o.status);return `<article class="k-card"><div class="top"><strong>#${esc(o.id)}</strong><small>${o.table==="takeaway"?"Para llevar":"Mesa "+esc(o.table||"-")}</small></div><p>${(o.items||[]).map(i=>`${i.qty}× ${esc(i.nombre)}`).join("<br>")}</p><button onclick="changeOrder('${esc(o.id)}','${n}')">${a}</button></article>`}
+async function sendCustomer(){
+ if(!customerCart.length)return toast("Agrega productos primero");
+ const payload=orderPayload(customerCart,"customer",$("customerTable").value,$("customerName").value,$("customerNote").value);
+ await createOrder(payload,true);
+}
+async function sendPos(){
+ if(!posCart.length)return toast("Agrega productos a la comanda");
+ const payload=orderPayload(posCart,"cashier",$("posTable").value,$("posClient").value,$("posNote").value);
+ await createOrder(payload,false);
+}
+function orderPayload(arr,source,table,client,note){return{action:"createOrder",source,table,client:(client||"Cliente").trim(),note:(note||"").trim(),items:arr.map(x=>({id:x.id,nombre:x.nombre,precio:x.precio,qty:x.qty})),total:arr.reduce((s,x)=>s+x.precio*x.qty,0)}}
+async function createOrder(payload,customer){
+ try{
+  const d=await post(payload);if(!d.ok)throw Error(d.error||"Error");
+  const id=d.id||d.orderId||"P-"+Date.now().toString().slice(-6);
+  if(customer){customerCart=[];renderCustomerCart();modal("customerCart",false);$("successId").textContent="Pedido #"+id;modal("successModal",true)}
+  else{posCart=[];renderPosCart();$("posCart").classList.remove("open");toast("Pedido enviado a cocina #"+id)}
+  sync();
+ }catch(e){toast("No se pudo enviar. Revisa la conexión.")}
+}
+async function track(){
+ const id=$("trackId").value.trim();if(!id)return toast("Escribe un número de pedido");
+ try{const d=await get("order",{id});if(!d.ok||!d.order)throw Error("Pedido no encontrado");const o=d.order;const steps=["pending","cooking","ready","delivered"],idx=Math.max(0,steps.indexOf(o.status));$("trackResult").innerHTML=`<div class="track-result"><b>Pedido #${esc(o.id)}</b><p style="font-size:9px;color:#747973">${esc(o.client||"Cliente")} · ${o.table==="takeaway"?"Para llevar":"Mesa "+esc(o.table||"")}</p><strong style="color:var(--brand)">${labelStatus(o.status)}</strong><div class="stepper">${steps.map((s,i)=>`<div class="step ${i<=idx?"done":""}"><i class="ph ${i===0?"ph-receipt":i===1?"ph-chef-hat":i===2?"ph-check-circle":"ph-hand-heart"}"></i>${labelStatus(s)}</div>`).join("")}</div></div>`}catch(e){toast(e.message)}}
+function renderAdminProducts(){$("productList").innerHTML=products.map(p=>`<div class="admin-product"><div><b>${esc(p.nombre)}</b><small>${esc(p.categoria)} · ${money(p.precio)}</small></div><button onclick="editProduct('${p.id}')"><i class="ph ph-pencil"></i></button></div>`).join("")}
+function editProduct(id){const p=products.find(x=>x.id===String(id));if(!p)return;$("editId").value=p.id;$("prodName").value=p.nombre;$("prodPrice").value=p.precio;$("prodCat").value=p.categoria}
+async function saveProduct(e){e.preventDefault();try{const d=await post({action:"saveProduct",id:$("editId").value,nombre:$("prodName").value,precio:Number($("prodPrice").value),categoria:$("prodCat").value});if(!d.ok)throw Error();e.target.reset();toast("Producto guardado");sync()}catch(e){toast("No se pudo guardar")}}
 
-document.querySelectorAll('[data-admin-action]').forEach(btn=>btn.addEventListener('click',()=>{
-  const action=btn.dataset.adminAction;
-  if(action==='caja'){renderCaja();open('cajaModal');return}
-  if(action==='kitchen'){renderKitchen();open('kitchenModal');return}
-  if(action==='catalog'){
-    const form=$("productForm");
-    form?.scrollIntoView({behavior:'smooth',block:'start'});
-    setTimeout(()=>$("newName")?.focus(),250);
-  }
-}));
-
-renderDashboard();
-setInterval(renderDashboard,5000);
+function switchView(id){
+ currentView=id;document.querySelectorAll(".customer-view,.pos-view,.kitchen-view,.admin-view").forEach(x=>x.classList.add("hidden"));$(id).classList.remove("hidden");
+ document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
+ if(id==="posView")renderOrders();if(id==="kitchenView")renderKitchen();if(id==="adminView")renderAdminProducts();
+}
+document.querySelectorAll(".bottom-nav button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+$("heroMenu").onclick=()=>$("menu").scrollIntoView({behavior:"smooth"});
+$("search").oninput=renderProducts;
+$("openCustomerCart").onclick=()=>modal("customerCart",true);
+$("customerSend").onclick=sendCustomer;
+$("posSend").onclick=sendPos;
+$("posNew").onclick=()=>{posCart=[];renderPosCart();openPosCart()};
+$("posCloseCart").onclick=()=>$("posCart").classList.remove("open");
+$("trackOpen").onclick=()=>modal("trackModal",true);
+$("trackBtn").onclick=track;
+$("adminOpen").onclick=()=>switchView("adminView");
+$("syncBtn").onclick=sync;
+$("productForm").onsubmit=saveProduct;
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>modal(b.dataset.close,false));
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)modal(m.id,false)}));
+(async()=>{products=demo;renderAll();await sync();setInterval(sync,POLL)})();
