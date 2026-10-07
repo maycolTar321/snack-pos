@@ -60,7 +60,7 @@ function render(){
    <span class="product-tag">${esc(p.categoria)}</span>
    <button class="product-add" data-add="${esc(p.id)}" aria-label="Agregar">+</button>
   </div>
-  <div class="product-body"><h3>${esc(p.nombre)}</h3><p>${esc(p.descripcion)}</p><div class="product-price">${money(p.precio)}</div></div>
+  <div class="product-body"><h3>${esc(p.nombre)}</h3><p>${esc(p.descripcion)}</p><div class="product-bottom"><div class="product-price">${money(p.precio)}</div><button class="product-order-btn" data-add="${esc(p.id)}"><i class="ph ph-plus-circle"></i> Pedir</button></div><div class="order-hint"><i class="ph ph-hand-tap"></i> Toca para ver detalles o pedir</div></div>
  </article>`).join("");
  
  // Render categories dynamically
