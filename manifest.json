@@ -1,1 +1,10 @@
-{"name":"La Chura Snack V5","short_name":"La Chura","start_url":"./index.html","display":"standalone","background_color":"#f6f2ec","theme_color":"#7b2118","lang":"es"}
+{
+  "name":"La Chura Snack — Pedidos y Punto de Venta",
+  "short_name":"La Chura",
+  "start_url":"./index.html",
+  "display":"standalone",
+  "background_color":"#f7f3ed",
+  "theme_color":"#65170f",
+  "description":"Menú digital, pedidos en línea, cocina KDS, caja y administración para La Chura Snack.",
+  "icons":[{"src":"logo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
+}

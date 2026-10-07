@@ -1,32 +1,23 @@
-LA CHURA SNACK V5
-==================
+LA CHURA SNACK — V5 BRUTAL / VISUAL PREMIUM
 
-Esta versión está planteada como una app de restaurante moderna, inspirada en patrones de apps móviles de pedidos:
-- Home visual.
-- Menú por categorías.
-- Búsqueda.
-- Carrito del cliente.
-- Pedido desde celular.
-- Pedido creado por cajero.
-- Pantalla KDS para cocina.
-- Seguimiento de pedido.
-- Centro administrativo.
-- Productos y precios.
-- Caja básica.
-- PWA.
-- Backend Google Apps Script + Sheets.
-- Sincronización automática cada 3 segundos.
+Incluye:
+- Logo original de La Chura Snack.
+- Menú digital responsive inspirado en la referencia visual enviada.
+- Animaciones, microinteracciones, tarjetas premium, hero, categorías y carrito.
+- Pedido en línea.
+- Administración y catálogo.
+- Caja, apertura/cierre, ingresos, egresos y cobro.
+- Cocina KDS con tres columnas.
+- PIN de administración.
+- Diseño móvil/desktop.
 
-INSTALACIÓN
-1) Abre Google Sheets y crea una hoja.
-2) Extensiones > Apps Script.
-3) Pega Code.gs.
-4) Ejecuta setup() una vez y acepta permisos.
-5) Implementa como aplicación web, ejecutando como tú y con acceso para quienes tengan el enlace.
-6) Copia la URL /exec en script.js. Ya está configurada con la URL que entregó el usuario.
-7) Publica index.html, style.css, script.js y manifest.json en el hosting.
+Archivos:
+index.html
+style.css
+script.js
+manifest.json
+logo.png
 
-NOTA SOBRE TIEMPO REAL
-Apps Script no ofrece WebSockets nativos. V5 utiliza sincronización automática cada 3 segundos. Para tiempo real push de nivel superior, la siguiente arquitectura recomendada es Supabase Realtime/Firebase para PEDIDOS, manteniendo Sheets para reportes si se desea.
-
-V1 NO incluye delivery a domicilio. El modelo queda preparado para añadirlo después.
+IMPORTANTE:
+Se conserva la URL de Apps Script existente dentro de script.js.
+La sincronización real entre dispositivos depende del backend desplegado en esa URL. La interfaz no reemplaza ni borra el backend.
