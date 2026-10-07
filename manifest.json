@@ -1,9 +1,11 @@
 {
-  "name":"La Chura Snack · Pedidos PRO",
+  "name":"La Chura Snack · Sistema de Pedidos",
   "short_name":"La Chura",
   "start_url":"./index.html",
   "display":"standalone",
-  "background_color":"#f6f3ef",
+  "background_color":"#f5f2ee",
   "theme_color":"#711b14",
-  "icons":[{"src":"logo.png","sizes":"512x512","type":"image/png"}]
+  "description":"Sistema de pedidos y operación de La Chura Snack.",
+  "orientation":"portrait-primary",
+  "icons":[{"src":"logo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
 }
