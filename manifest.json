@@ -1,9 +1,9 @@
 {
-  "name":"La Chura Snack",
+  "name":"La Chura Snack · Pedidos PRO",
   "short_name":"La Chura",
   "start_url":"./index.html",
   "display":"standalone",
-  "background_color":"#f7f3ed",
-  "theme_color":"#67180f",
+  "background_color":"#f6f3ef",
+  "theme_color":"#711b14",
   "icons":[{"src":"logo.png","sizes":"512x512","type":"image/png"}]
 }
