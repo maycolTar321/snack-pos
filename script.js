@@ -429,6 +429,54 @@ $("btn-cerrar-caja").onclick=async()=>{
  }catch(e){toast("No se pudo cerrar la caja online");}
 };
 
+const printCajaBtn = document.getElementById("btn-print-report");
+if(printCajaBtn) {
+  printCajaBtn.onclick = () => {
+    const movimientos = sharedState.movimientos||[];
+    const ventas=(sharedState.ventas||[]).filter(v=>v.source==="pos").reduce((s,x)=>s+Number(x.total||0),0);
+    const ingresos=movimientos.filter(m=>m.tipo==="Ingreso").reduce((s,x)=>s+Number(x.monto||0),0);
+    const egresos=movimientos.filter(m=>m.tipo==="Egreso").reduce((s,x)=>s+Number(x.monto||0),0);
+    const inicial = Number(caja.saldoInicial||0);
+    const actual = inicial + ventas + ingresos - egresos;
+    
+    const reportHTML = `
+    <div style="font-family: 'Courier New', monospace; width:300px; margin:0 auto; padding:20px; color:#000;">
+      <div style="text-align:center; margin-bottom:15px; border-bottom: 2px dashed #000; padding-bottom: 10px;">
+        <h2 style="margin:0; font-size:22px; font-weight:900;">REPORTE DE CAJA</h2>
+        <p style="margin:5px 0 0; font-size:12px; font-weight: bold;">LA CHURA SNACK</p>
+        <p style="margin:2px 0 0; font-size:12px;">Generado: ${new Date().toLocaleString("es-BO")}</p>
+      </div>
+      <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #000;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+          <span>Fondo Inicial:</span><span>${money(inicial)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+          <span>Ventas en Efectivo:</span><span>${money(ventas)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+          <span>Ingresos Manuales:</span><span>${money(ingresos)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+          <span>Egresos / Gastos:</span><span>-${money(egresos)}</span>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-weight:900; font-size:16px; margin-bottom:5px;">
+        <span>TOTAL EN CAJA:</span>
+        <span>${money(actual)}</span>
+      </div>
+      <div style="text-align:center; margin-top:30px; font-size:10px; color:#555;">
+        === FIN DEL REPORTE ===
+      </div>
+    </div>
+    `;
+    const printContainer = document.getElementById("printTicket");
+    if(printContainer) {
+      printContainer.innerHTML = reportHTML;
+      window.print();
+    }
+  };
+}
+
 async function registerCashMovement(tipo){
  const monto=Number(prompt(`Monto del ${tipo.toLowerCase()} (Bs):`)||0);
  if(monto<=0)return;
