@@ -1,23 +1,12 @@
-LA CHURA SNACK — V5 BRUTAL / VISUAL PREMIUM
+LA CHURA SNACK V5.1 — MULTI-DISPOSITIVO
 
-Incluye:
-- Logo original de La Chura Snack.
-- Menú digital responsive inspirado en la referencia visual enviada.
-- Animaciones, microinteracciones, tarjetas premium, hero, categorías y carrito.
-- Pedido en línea.
-- Administración y catálogo.
-- Caja, apertura/cierre, ingresos, egresos y cobro.
-- Cocina KDS con tres columnas.
-- PIN de administración.
-- Diseño móvil/desktop.
+Esta versión elimina la dependencia de localStorage para los pedidos.
 
-Archivos:
-index.html
-style.css
-script.js
-manifest.json
-logo.png
+1) Reemplaza el Code.gs de tu proyecto Apps Script por el incluido.
+2) Ejecuta setup() una vez.
+3) Implementar > Nueva implementación > Aplicación web. Ejecutar como tú. Acceso: cualquier usuario con el enlace.
+4) Abre el sistema en un celular y otro dispositivo.
+5) Haz un pedido en el celular. La PC, entrando a PIN > Cocina KDS, lo recibirá en hasta 3 segundos.
+6) Cocina puede Preparar > Terminar > Entregar. El celular consulta el estado automáticamente.
 
-IMPORTANTE:
-Se conserva la URL de Apps Script existente dentro de script.js.
-La sincronización real entre dispositivos depende del backend desplegado en esa URL. La interfaz no reemplaza ni borra el backend.
+La sincronización de pedidos usa Google Sheets como fuente compartida.

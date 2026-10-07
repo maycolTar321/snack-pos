@@ -1,4 +1,11 @@
 const API_URL="https://script.google.com/macros/s/AKfycbyGXX6nPtKPfSsGEGbieM4eaIPRfdRh_WTXuZI5-c9zEZRy6PmMWeL7J6wsPxncsFdSqQ/exec";
+const STAFF_KEY="LA-CHURA-STAFF-2026";
+const REALTIME_INTERVAL=2000;
+let realtimeTimer=null,lastRemoteOrderIds=new Set(),customerTrackingTimer=null;
+let sharedState={caja:null,movimientos:[],ventas:[],metrics:{}};
+async function apiGet(params={}){const q=new URLSearchParams({...params,_:Date.now()});const r=await fetch(`${API_URL}?${q.toString()}`,{cache:"no-store"});if(!r.ok)throw new Error(`HTTP ${r.status}`);return await r.json();}
+async function apiPost(payload){const r=await fetch(API_URL,{method:"POST",body:JSON.stringify(payload),cache:"no-store"});if(!r.ok)throw new Error(`HTTP ${r.status}`);return await r.json();}
+function setConnection(ok,label){const el=$("connectionStatus");if(!el)return;el.classList.toggle("offline",!ok);const icon=el.querySelector("i"),txt=el.querySelector("span");if(icon)icon.className=ok?"ph ph-cloud-check":"ph ph-cloud-slash";if(txt)txt.textContent=label||(ok?"Online":"Sin conexión");}
 const STORAGE_KEY="lachura_products_v3";
 
 let demo=[
@@ -188,14 +195,17 @@ window.editProduct = (id) => {
   $("btn-save-product").innerHTML = "Actualizar Producto <i class='ph ph-check'></i>";
 };
 
-window.deleteProduct = (id) => {
-  if(confirm("¿Eliminar este producto?")) {
-    localProducts = localProducts.filter(x => x.id !== id);
-    demo = demo.filter(x => x.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localProducts));
-    try{renderCaja();}catch(e){}
-load();
-    toast("Producto eliminado");
+window.deleteProduct = async (id) => {
+  if(!confirm("¿Eliminar este producto para todos los dispositivos?")) return;
+  try{
+    const remote=await apiPost({action:"deleteProduct",staffKey:STAFF_KEY,id});
+    if(!remote.ok)throw new Error(remote.error||"No autorizado");
+    localProducts=localProducts.filter(x=>x.id!==id);
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(localProducts));
+    await load();
+    toast("Producto eliminado del catálogo online");
+  }catch(err){
+    toast("No se pudo eliminar en el servidor");
   }
 };
 
@@ -212,20 +222,24 @@ $("productForm").onsubmit=e=>{
  e.preventDefault();
  const id = $("editingId").value;
  const file=$("newImage").files[0],url=$("newImageUrl").value.trim();
- const save=img=>{
-  const p={id:id || "local-"+Date.now(),nombre:$("newName").value.trim(),precio:Number($("newPrice").value),categoria:$("newCategory").value,imagen:img||fallback($("newCategory").value),descripcion:$("newDescription").value.trim()||"Preparado especialmente para ti."};
-  if(id) {
-    const idx = localProducts.findIndex(x => x.id === id);
-    if(idx >= 0) localProducts[idx] = p;
-    else localProducts.push(p);
-  } else {
+ const save=async img=>{
+  const p={id:id || "p-"+Date.now(),nombre:$("newName").value.trim(),precio:Number($("newPrice").value),categoria:$("newCategory").value,imagen:img||fallback($("newCategory").value),descripcion:$("newDescription").value.trim()||"Preparado especialmente para ti.",activo:true};
+  try{
+    const remote=await apiPost({action:"upsertProduct",staffKey:STAFF_KEY,product:p});
+    if(!remote.ok)throw new Error(remote.error||"No autorizado");
+    localProducts=localProducts.filter(x=>x.id!==p.id);
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(localProducts));
+    $("btn-cancel-edit").click();
+    await load();
+    toast(id ? "Producto actualizado para todos los equipos" : "Producto publicado en el catálogo");
+  }catch(err){
+    localProducts=localProducts.filter(x=>x.id!==p.id);
     localProducts.unshift(p);
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(localProducts));
+    $("btn-cancel-edit").click();
+    await load();
+    toast("Sin servidor: guardado solo en este equipo");
   }
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(localProducts));
-  $("btn-cancel-edit").click();
-  try{renderCaja();}catch(e){}
-load();
-  toast(id ? "Producto actualizado" : "Producto agregado");
  };
  if(file){const r=new FileReader();r.onload=()=>save(r.result);r.readAsDataURL(file)}else save(url);
 };
@@ -234,32 +248,72 @@ $("clearLocal").onclick=()=>{if(!localProducts.length)return toast("No tienes pr
 
 $("btn-enviar").onclick=async()=>{
  if(!cart.length)return toast("Agrega productos primero");
- 
- if(isCajaMode) {
-  $("checkoutTotal").textContent = money(cart.reduce((s,x)=>s+x.precio*x.qty,0));
-  $("cashReceived").value = "";
-  $("checkoutChange").textContent = "Bs 0.00";
-  close("cartModal");
-  open("checkoutModal");
-  setTimeout(()=>$("cashReceived").focus(), 100);
-  return;
- }
-
+ if(isCajaMode){$("checkoutTotal").textContent=money(cart.reduce((s,x)=>s+x.precio*x.qty,0));$("cashReceived").value="";$("checkoutChange").textContent="Bs 0.00";close("cartModal");open("checkoutModal");setTimeout(()=>$("cashReceived").focus(),100);return;}
  const cliente=$("nombre-cliente").value.trim();if(!cliente){$("nombre-cliente").focus();return toast("Escribe tu nombre o mesa")}
- const btn=$("btn-enviar");btn.disabled=true;btn.innerHTML="Enviando…";
- const total=cart.reduce((s,x)=>s+x.precio*x.qty,0),orden=cart.flatMap(x=>Array(x.qty).fill(x.nombre)).join(", ");
- 
- // Guardar pedido visualmente para la pantalla de cocina
- saveOrderToKitchen({ clientName: cliente, items: cart }, true);
-
- try{await fetch(API_URL,{method:"POST",body:JSON.stringify({cliente,orden,total})});cart=[];update();$("nombre-cliente").value="";close("cartModal");toast("¡Pedido enviado a cocina!")}
- catch(e){toast("No se pudo enviar. Revisa tu conexión.")}
- finally{btn.disabled=false;btn.innerHTML='Enviar a cocina <b>↗</b>'}
+ const btn=$("btn-enviar");btn.disabled=true;btn.innerHTML='<i class="ph ph-spinner-gap ph-spin"></i> Enviando a cocina…';
+ const total=cart.reduce((s,x)=>s+x.precio*x.qty,0);
+ const items=cart.map(x=>({id:x.id,nombre:x.nombre,precio:Number(x.precio),qty:Number(x.qty),categoria:x.categoria,imagen:x.imagen}));
+ try{
+  setConnection(true,"Enviando");
+  const result=await apiPost({action:"createOrder",cliente,deliveryType:"pickup",address:"",items,total,source:"web"});
+  if(!result.ok||!result.order)throw new Error(result.error||"No se pudo crear el pedido");
+  const order=result.order;localStorage.setItem("lachura_last_order",JSON.stringify({id:order.id,token:order.token,status:order.status}));
+  cart=[];update();$("nombre-cliente").value="";close("cartModal");showOrderTracking(order);toast(`Pedido #${order.id} enviado a cocina`);setConnection(true,"Online");
+ }catch(e){setConnection(false,"Sin conexión");toast("No se pudo enviar. Verifica que Apps Script esté publicado.");console.error("LA CHURA createOrder",e)}
+ finally{btn.disabled=false;btn.innerHTML='<i class="ph ph-paper-plane-tilt"></i> Enviar a cocina'}
 };
 
-/* --- MODO CAJA Y VENTAS --- */
+/* --- OPERACIÓN CENTRALIZADA: CAJA + VENTAS + PEDIDOS --- */
 let isCajaMode = localStorage.getItem("cajaMode")==="true";
 let sales = JSON.parse(localStorage.getItem("lachura_sales")||"[]");
+let caja = {estado:"cerrada",saldoInicial:0,movimientos:[]};
+
+function renderSharedMetrics(){
+  const m=sharedState.metrics||{};
+  const set=(id,value)=>{const el=$(id);if(el)el.textContent=value;};
+  set("onlineOrdersCount",m.pedidosActivos||0);
+  set("onlinePendingCount",m.pendientes||0);
+  set("onlineCookingCount",m.preparando||0);
+  set("onlineReadyCount",m.listos||0);
+  set("onlineSalesTotal",money(m.ventasHoy||0));
+  set("onlineCashBalance",money(m.saldoCaja||0));
+  set("adminLiveOrders",m.pedidosActivos||0);
+  set("adminLiveSales",money(m.ventasHoy||0));
+  set("adminCashBalance",money(m.saldoCaja||0));
+}
+
+async function refreshSharedState(silent=true){
+  try{
+    const data=await apiGet({action:"dashboard",staffKey:STAFF_KEY});
+    if(!data.ok)throw new Error(data.error||"No autorizado");
+    sharedState=data;
+    caja=data.caja||caja;
+    sales=data.ventas||[];
+    activeOrders=(data.orders||[]).map(normalizeRemoteOrder);
+    const ids=new Set(activeOrders.map(o=>o.id));
+    const hasNew=activeOrders.some(o=>!lastRemoteOrderIds.has(o.id));
+    lastRemoteOrderIds=ids;
+    renderKitchen();
+    renderCaja();
+    renderSharedMetrics();
+    renderOnlineOrderFeed();
+    setConnection(true,"Sincronizado");
+    if(hasNew&&!silent)toast("Nueva comanda recibida en el sistema");
+    return data;
+  }catch(err){
+    setConnection(false,"Sin conexión");
+    if(!silent)toast("No se pudo sincronizar con el servidor");
+    console.warn("LA CHURA SYNC",err);
+    return null;
+  }
+}
+
+function renderOnlineOrderFeed(){
+  const boxes=[$("onlineOrdersList"),$("onlineOrdersListCaja")].filter(Boolean);
+  const orders=(sharedState.orders||[]).slice(0,12);
+  const html=orders.length?orders.map(o=>`<article class="online-order-row status-${esc(o.status)}"><div class="online-order-main"><strong>#${esc(o.id)}</strong><span>${esc(o.cliente||"Cliente")} · ${o.source==="pos"?"Caja":"Online"}</span></div><div class="online-order-status"><b>${esc(statusLabel(o.status))}</b><small>${money(o.total)}</small></div></article>`).join(""):`<div class="online-empty"><i class="ph ph-broadcast"></i><span>Esperando pedidos...</span></div>`;
+  boxes.forEach(box=>box.innerHTML=html);
+}
 
 $("cajaModeToggle").checked = isCajaMode;
 $("cajaModeToggle").onchange = (e) => {
@@ -271,10 +325,10 @@ $("cajaModeToggle").onchange = (e) => {
 
 function updateCajaUI() {
  if(isCajaMode) {
-  $("btn-enviar").innerHTML = "Cobrar Venta <b>$</b>";
-  $("nombre-cliente").parentElement.hidden = true; // hide "A nombre de quien"
+  $("btn-enviar").innerHTML = '<i class="ph ph-currency-circle-dollar"></i> Cobrar venta';
+  $("nombre-cliente").parentElement.hidden = true;
  } else {
-  $("btn-enviar").innerHTML = "Enviar a cocina <b>↗</b>";
+  $("btn-enviar").innerHTML = '<i class="ph ph-paper-plane-tilt"></i> Enviar a cocina';
   $("nombre-cliente").parentElement.hidden = false;
  }
 }
@@ -283,203 +337,118 @@ updateCajaUI();
 $("cashReceived").oninput = (e) => {
  const total = cart.reduce((s,x)=>s+x.precio*x.qty,0);
  const cash = Number(e.target.value);
- const change = cash - total;
- $("checkoutChange").textContent = money(Math.max(0, change));
- $("checkoutChange").style.color = change < 0 ? "#a22b1b" : "var(--wine)";
+ const change = cash-total;
+ $("checkoutChange").textContent=money(Math.max(0,change));
+ $("checkoutChange").style.color=change<0?"#a22b1b":"var(--wine)";
 };
 
-$("btn-confirm-sale").onclick = () => {
- const total = cart.reduce((s,x)=>s+x.precio*x.qty,0);
- const cash = Number($("cashReceived").value);
- if(cash < total && cash > 0) return toast("El efectivo es menor al total");
- 
- const sale = {
-  id: "V-" + Date.now().toString().slice(-6),
-  date: new Date().toLocaleString(),
-  items: [...cart],
-  total: total,
-  cash: cash,
-  change: Math.max(0, cash - total),
-  clientName: "Caja Local"
+$("btn-confirm-sale").onclick = async () => {
+ const total=cart.reduce((s,x)=>s+x.precio*x.qty,0);
+ const cash=Number($("cashReceived").value);
+ if(cash<total)return toast("El efectivo es menor al total");
+ if(!cart.length)return toast("No hay productos en la venta");
+ const sale={
+  id:"V-"+Date.now().toString().slice(-6),
+  date:new Date().toLocaleString("es-BO"),
+  items:[...cart],total,cash,change:Math.max(0,cash-total),clientName:"Caja Local"
  };
- sales.unshift(sale);
- localStorage.setItem("lachura_sales", JSON.stringify(sales));
- 
- // Registrar en Caja si está abierta
- if (caja.estado === "abierta") {
-   const detalleItems = cart.map(i => `${i.qty}x ${i.nombre}`).join(", ");
-   caja.movimientos.push({
-     tipo: "Venta",
-     monto: total,
-     detalle: `Ticket ${sale.id} | ${detalleItems}`,
-     hora: new Date().toLocaleTimeString()
-   });
-   localStorage.setItem("lachura_caja", JSON.stringify(caja));
+ try{
+  setConnection(true,"Registrando venta");
+  const order=await apiPost({action:"createOrder",cliente:"Caja Local",deliveryType:"pickup",address:"",items:sale.items.map(i=>({id:i.id,nombre:i.nombre,precio:Number(i.precio),qty:Number(i.qty),categoria:i.categoria,imagen:i.imagen})),total:sale.total,source:"pos"});
+  if(!order.ok)throw new Error(order.error||"No se creó la comanda");
+  const remoteSale=await apiPost({action:"registerSale",staffKey:STAFF_KEY,id:sale.id,orderId:order.order.id,total:sale.total,efectivo:sale.cash,cambio:sale.change,source:"pos",cliente:"Caja Local",items:sale.items});
+  if(!remoteSale.ok)throw new Error(remoteSale.error||"No se registró la venta");
+  sales.unshift({...sale,remoteId:order.order.id});
+  localStorage.setItem("lachura_sales",JSON.stringify(sales.slice(0,50)));
+  printTicket(sale);
+  cart=[];update();close("checkoutModal");
+  await refreshSharedState(false);
+  toast("Venta sincronizada con Caja y Cocina");
+ }catch(err){
+  sales.unshift(sale);
+  localStorage.setItem("lachura_sales",JSON.stringify(sales.slice(0,50)));
+  toast("No se pudo sincronizar la venta");
+  console.error("LA CHURA SALE",err);
  }
- 
- // Enviar a la pantalla de cocina local
- saveOrderToKitchen(sale, false);
- 
- printTicket(sale);
- cart = [];
- update();
- close("checkoutModal");
- toast("Venta completada");
 };
 
-/* --- CAJA CHICA Y MOVIMIENTOS --- */
-let caja = JSON.parse(localStorage.getItem("lachura_caja") || '{"estado":"cerrada","saldoInicial":0,"movimientos":[]}');
-
-function renderCaja() {
-  if (caja.estado === "cerrada") {
-    $("cajaCerrada").hidden = false;
-    $("cajaAbierta").hidden = true;
-  } else {
-    $("cajaCerrada").hidden = true;
-    $("cajaAbierta").hidden = false;
-    
-    const ventas = caja.movimientos.filter(m => m.tipo === "Venta").reduce((s,x)=>s+x.monto,0);
-    const ingresos = caja.movimientos.filter(m => m.tipo === "Ingreso").reduce((s,x)=>s+x.monto,0);
-    const egresos = caja.movimientos.filter(m => m.tipo === "Egreso").reduce((s,x)=>s+x.monto,0);
-    const actual = caja.saldoInicial + ventas + ingresos - egresos;
-    
-    $("cajaVentasTotal").textContent = money(ventas);
-    $("cajaSaldoActual").textContent = money(actual);
-    
-    $("cajaMovimientosList").innerHTML = caja.movimientos.map(m => `
-      <div style="background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <strong style="color:${m.tipo==='Egreso' ? '#ff004d' : 'var(--ink)'}">${m.tipo}</strong>
-          <span style="color:var(--muted); margin-left:5px;">${m.hora}</span>
-          <div style="color:var(--muted); margin-top:3px;">${m.detalle}</div>
-        </div>
-        <strong style="font-size:14px; color:${m.tipo==='Egreso' ? '#ff004d' : 'var(--ink)'}">${m.tipo==='Egreso'?'-':'+'}${money(m.monto)}</strong>
-      </div>
-    `).reverse().join("") || `<p style="font-size:12px; color:var(--muted); text-align:center;">No hay movimientos en este turno.</p>`;
-  }
-}
-
-$("btn-abrir-caja").onclick = () => {
-  const monto = Number($("cajaAperturaMonto").value);
-  caja = { estado: "abierta", saldoInicial: monto, movimientos: [] };
-  localStorage.setItem("lachura_caja", JSON.stringify(caja));
-  renderCaja();
-};
-
-$("btn-cerrar-caja").onclick = () => {
-  if(confirm("¿Seguro que quieres cerrar la caja (Corte Z)? Se reiniciarán los movimientos.")) {
-    caja = { estado: "cerrada", saldoInicial: 0, movimientos: [] };
-    localStorage.setItem("lachura_caja", JSON.stringify(caja));
-    renderCaja();
-    toast("Caja cerrada exitosamente");
-  }
-};
-
-$("btn-nuevo-ingreso").onclick = () => {
-  const monto = Number(prompt("Monto del ingreso (Bs):"));
-  if(!monto) return;
-  const detalle = prompt("Motivo del ingreso:") || "Ingreso manual";
-  caja.movimientos.push({ tipo: "Ingreso", monto, detalle, hora: new Date().toLocaleTimeString() });
-  localStorage.setItem("lachura_caja", JSON.stringify(caja));
-  renderCaja();
-};
-
-$("btn-nuevo-egreso").onclick = () => {
-  const monto = Number(prompt("Monto del egreso (Bs):"));
-  if(!monto) return;
-  const detalle = prompt("Motivo del egreso:") || "Retiro / Pago a proveedor";
-  caja.movimientos.push({ tipo: "Egreso", monto, detalle, hora: new Date().toLocaleTimeString() });
-  localStorage.setItem("lachura_caja", JSON.stringify(caja));
-  renderCaja();
-};
-
-$("openCaja").onclick = () => {
-  renderCaja();
-  open("cajaModal");
-};
-
-/* --- MODO COCINA (KDS) MULTI-ESTADO --- */
-let activeOrders = JSON.parse(localStorage.getItem("lachura_orders")||"[]");
-
-function saveOrderToKitchen(sale, isClient) {
- const order = {
-  id: sale.id || "P-" + Date.now().toString().slice(-6),
-  date: new Date().toLocaleTimeString(),
-  items: sale.items || [...cart],
-  type: isClient ? "Pedido Online" : "En Caja",
-  clientName: sale.clientName || "Cliente",
-  status: "pending" // pending, cooking, ready
- };
- activeOrders.push(order);
- localStorage.setItem("lachura_orders", JSON.stringify(activeOrders));
- renderKitchen();
-}
-
-function renderOrderCard(o, idx) {
-  let btnText = "", btnColor = "", nextStatus = "";
-  if(o.status === "pending") { btnText = "<i class='ph ph-chef-hat'></i> Preparar"; btnColor = "#d97736"; nextStatus = "cooking"; }
-  else if(o.status === "cooking") { btnText = "<i class='ph ph-check-circle'></i> Terminar"; btnColor = "#00b862"; nextStatus = "ready"; }
-  else { btnText = "<i class='ph ph-package'></i> Entregar"; btnColor = "var(--wine)"; nextStatus = "done"; }
-  
-  return `
-  <div style="background:#fff; border:1px solid var(--line); border-left:4px solid ${btnColor}; border-radius:12px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.03);">
-   <div style="padding:12px; font-weight:bold; display:flex; justify-content:space-between; border-bottom:1px solid var(--line);">
-    <span>#${o.id}</span>
-    <span style="color:var(--muted); font-size:11px;">${o.date}</span>
-   </div>
-   <div style="padding:10px; background:#f9f9f9; font-size:12px; color:var(--ink); font-weight:bold;">
-    ${o.type} - ${o.clientName}
-   </div>
-   <div style="padding:15px; flex:1; overflow-y:auto; font-size:13px; line-height:1.6;">
-    ${o.items.map(i => `<div style="border-bottom:1px dashed var(--line); padding-bottom:5px; margin-bottom:5px;"><b>${i.qty}x</b> ${i.nombre}</div>`).join('')}
-   </div>
-   <button class="primary-button" style="border-radius:0; padding:12px; font-size:14px; background:${btnColor};" onclick="changeOrderStatus('${o.id}', '${nextStatus}')">${btnText}</button>
-  </div>`;
-}
-
-function renderKitchen() {
-  const pending = activeOrders.filter(o => o.status === "pending");
-  const cooking = activeOrders.filter(o => o.status === "cooking");
-  const ready = activeOrders.filter(o => o.status === "ready");
-
-  $("kitchenOrdersPending").innerHTML = pending.map(renderOrderCard).join("") || `<p style="text-align:center; color:var(--muted); font-size:12px; margin-top:20px;">Sin pedidos</p>`;
-  $("kitchenOrdersCooking").innerHTML = cooking.map(renderOrderCard).join("") || `<p style="text-align:center; color:var(--muted); font-size:12px; margin-top:20px;">Sin pedidos</p>`;
-  $("kitchenOrdersReady").innerHTML = ready.map(renderOrderCard).join("") || `<p style="text-align:center; color:var(--muted); font-size:12px; margin-top:20px;">Sin pedidos</p>`;
-}
-
-window.changeOrderStatus = (id, newStatus) => {
-  const idx = activeOrders.findIndex(o => o.id === id);
-  if(idx === -1) return;
-  
-  const last=JSON.parse(localStorage.getItem("lachura_last_order")||"null");
-  if(last && last.id===id) {
-    last.status=newStatus;
-    localStorage.setItem("lachura_last_order",JSON.stringify(last));
-  }
-  if (newStatus === "done") {
-    activeOrders.splice(idx, 1);
-  } else {
-    activeOrders[idx].status = newStatus;
-  }
-  localStorage.setItem("lachura_orders", JSON.stringify(activeOrders));
-  renderKitchen();
-};
-
-$("openKitchen").onclick = () => {
- renderKitchen();
- open("kitchenModal");
-};
-
-window.addEventListener('storage', (e) => {
- if(e.key === "lachura_orders") {
-  activeOrders = JSON.parse(e.newValue || "[]");
-  renderKitchen();
+function renderCaja(){
+ const remote=sharedState.caja;
+ if(remote)caja=remote;
+ const movimientos=sharedState.movimientos||[];
+ const localFallback=caja.movimientos||[];
+ if(caja.estado==="cerrada"){
+  $("cajaCerrada").hidden=false;
+  $("cajaAbierta").hidden=true;
+ }else{
+  $("cajaCerrada").hidden=true;
+  $("cajaAbierta").hidden=false;
+  const ventas=(sharedState.ventas||[]).filter(v=>v.source==="pos").reduce((s,x)=>s+Number(x.total||0),0);
+  const ingresos=movimientos.filter(m=>m.tipo==="Ingreso").reduce((s,x)=>s+Number(x.monto||0),0);
+  const egresos=movimientos.filter(m=>m.tipo==="Egreso").reduce((s,x)=>s+Number(x.monto||0),0);
+  const actual=Number(caja.saldoInicial||0)+ventas+ingresos-egresos;
+  $("cajaVentasTotal").textContent=money(ventas);
+  $("cajaSaldoActual").textContent=money(actual);
+  const list=movimientos.length?movimientos:localFallback;
+  $("cajaMovimientosList").innerHTML=list.map(m=>`\
+   <div class="movement-row">\
+    <div class="movement-symbol ${m.tipo==="Egreso"?"out":"in"}"><i class="ph ${m.tipo==="Egreso"?"ph-arrow-up-right":"ph-arrow-down-left"}"></i></div>\
+    <div class="movement-copy"><strong>${esc(m.tipo)}</strong><small>${esc(m.detalle||"")} · ${new Date(m.timestamp||Date.now()).toLocaleTimeString("es-BO",{hour:"2-digit",minute:"2-digit"})}</small></div>\
+    <b class="movement-amount ${m.tipo==="Egreso"?"negative":"positive"}">${m.tipo==="Egreso"?"-":"+"}${money(m.monto)}</b>\
+   </div>`).join("")||`<div class="online-empty"><i class="ph ph-receipt"></i><span>No hay movimientos en este turno.</span></div>`;
  }
- if(e.key === "lachura_caja") {
-  caja = JSON.parse(e.newValue || '{"estado":"cerrada","saldoInicial":0,"movimientos":[]}');
-  renderCaja();
- }
-});
+ renderSharedMetrics();
+}
+
+$("btn-abrir-caja").onclick=async()=>{
+ const monto=Number($("cajaAperturaMonto").value||0);
+ try{
+  const r=await apiPost({action:"openCash",staffKey:STAFF_KEY,monto,usuario:"Caja"});
+  if(!r.ok)throw new Error(r.error);
+  caja=r.caja;await refreshSharedState(false);$("cajaAperturaMonto").value="";toast("Caja abierta para todos los dispositivos");
+ }catch(e){toast("No se pudo abrir la caja online");}
+};
+
+$("btn-cerrar-caja").onclick=async()=>{
+ if(!confirm("¿Cerrar el turno para todos los equipos?"))return;
+ try{
+  const r=await apiPost({action:"closeCash",staffKey:STAFF_KEY});
+  if(!r.ok)throw new Error(r.error);
+  await refreshSharedState(false);toast("Caja cerrada y sincronizada");
+ }catch(e){toast("No se pudo cerrar la caja online");}
+};
+
+async function registerCashMovement(tipo){
+ const monto=Number(prompt(`Monto del ${tipo.toLowerCase()} (Bs):`)||0);
+ if(monto<=0)return;
+ const detalle=prompt("Detalle / motivo:")||"Movimiento manual";
+ try{
+  const r=await apiPost({action:"cashMovement",staffKey:STAFF_KEY,tipo,monto,detalle,source:"manual"});
+  if(!r.ok)throw new Error(r.error);
+  await refreshSharedState(false);toast(`${tipo} sincronizado en Caja`);
+ }catch(e){toast("No se pudo registrar el movimiento online");}
+}
+$("btn-nuevo-ingreso").onclick=()=>registerCashMovement("Ingreso");
+$("btn-nuevo-egreso").onclick=()=>registerCashMovement("Egreso");
+$("openCaja").onclick=async()=>{open("cajaModal");await refreshSharedState(false)};
+
+/* --- COCINA KDS ONLINE / MULTI-DISPOSITIVO --- */
+let activeOrders=[];
+function normalizeRemoteOrder(o){return{id:String(o.id),date:new Date(o.createdAt||Date.now()).toLocaleTimeString("es-BO",{hour:"2-digit",minute:"2-digit"}),createdAt:o.createdAt,updatedAt:o.updatedAt,items:Array.isArray(o.items)?o.items:[],type:o.source==="pos"?"En Caja":"Pedido Online",clientName:o.cliente||"Cliente",status:o.status||"pending",token:o.token,total:Number(o.total||0)};}
+async function refreshKitchenOnline(silent=true){return refreshSharedState(silent);}
+function startRealtime(){if(realtimeTimer)return;refreshSharedState(true);realtimeTimer=setInterval(()=>refreshSharedState(true),REALTIME_INTERVAL);}
+function renderOrderCard(o){let btnText="",btnColor="",nextStatus="";if(o.status==="pending"||o.status==="confirmed"){btnText="<i class='ph ph-chef-hat'></i> Preparar";btnColor="#d97736";nextStatus="cooking"}else if(o.status==="cooking"){btnText="<i class='ph ph-check-circle'></i> Terminar";btnColor="#00b862";nextStatus="ready"}else{btnText="<i class='ph ph-package'></i> Entregar";btnColor="var(--wine)";nextStatus="delivered"}return `<div class="kds-order-card"><div class="kds-order-head"><span>#${esc(o.id)}</span><time>${esc(o.date||"")}</time></div><div class="kds-order-client"><b>${esc(o.clientName)}</b><span>${esc(o.type)} · ${money(o.total)}</span></div><div class="kds-items">${o.items.map(i=>`<div><b>${Number(i.qty)||1}x</b><span>${esc(i.nombre)}</span></div>`).join("")}</div><button class="kds-action" style="--action:${btnColor}" onclick="changeOrderStatus('${esc(o.id)}','${nextStatus}')">${btnText}</button></div>`;}
+function renderKitchen(){const pending=activeOrders.filter(o=>o.status==="pending"||o.status==="confirmed"),cooking=activeOrders.filter(o=>o.status==="cooking"),ready=activeOrders.filter(o=>o.status==="ready");$("pendingCount").textContent=pending.length;$("cookingCount").textContent=cooking.length;$("readyCount").textContent=ready.length;$("kitchenOrdersPending").innerHTML=pending.map(renderOrderCard).join("")||emptyKitchen();$("kitchenOrdersCooking").innerHTML=cooking.map(renderOrderCard).join("")||emptyKitchen();$("kitchenOrdersReady").innerHTML=ready.map(renderOrderCard).join("")||emptyKitchen();}
+function emptyKitchen(){return '<div class="kds-empty"><i class="ph ph-coffee"></i><span>Sin comandas en esta etapa.</span></div>'}
+window.changeOrderStatus=async(id,newStatus)=>{try{const result=await apiPost({action:"updateOrderStatus",id,newStatus,staffKey:STAFF_KEY});if(!result.ok)throw new Error(result.error||"No autorizado");const last=JSON.parse(localStorage.getItem("lachura_last_order")||"null");if(last&&last.id===id){last.status=newStatus;localStorage.setItem("lachura_last_order",JSON.stringify(last))}await refreshSharedState(false);toast(newStatus==="cooking"?"Comanda en preparación":newStatus==="ready"?"Pedido listo":"Pedido entregado")}catch(e){setConnection(false,"Sin conexión");toast("No se pudo actualizar la comanda");console.error(e)}};
+$("openKitchen").onclick=async()=>{open("kitchenModal");await refreshSharedState(false)};
+
+function statusLabel(status){return({pending:"Pedido recibido",confirmed:"Pedido confirmado",cooking:"En preparación",ready:"¡Pedido listo!",delivered:"Pedido entregado",cancelled:"Pedido cancelado"})[status]||status;}
+function showOrderTracking(order){const modal=$("trackingModal");if(!modal)return;$("trackingNumber").textContent="#"+order.id;$("trackingStatus").textContent=statusLabel(order.status||"pending");updateTrackingVisual(order.status||"pending");open("trackingModal");startCustomerTracking();}
+function updateTrackingVisual(status){const map={pending:1,confirmed:1,cooking:2,ready:3,delivered:4,cancelled:0};const step=map[status]||1;document.querySelectorAll("#trackingSteps .tracking-step").forEach((el,i)=>el.classList.toggle("active",i<step));const s=$("trackingStatus");if(s)s.textContent=statusLabel(status);}
+async function refreshCustomerTracking(){const saved=JSON.parse(localStorage.getItem("lachura_last_order")||"null");if(!saved?.id||!saved?.token)return;try{const data=await apiGet({action:"order",id:saved.id,token:saved.token});if(data.ok&&data.order){saved.status=data.order.status;localStorage.setItem("lachura_last_order",JSON.stringify(saved));updateTrackingVisual(saved.status);setConnection(true,"Sincronizado")}}catch(e){setConnection(false,"Sin conexión")}}
+function startCustomerTracking(){if(customerTrackingTimer)return;refreshCustomerTracking();customerTrackingTimer=setInterval(refreshCustomerTracking,REALTIME_INTERVAL);}
+startRealtime();
 
 function printTicket(sale) {
  const ticketHTML = `
