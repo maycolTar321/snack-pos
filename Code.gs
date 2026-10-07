@@ -125,6 +125,7 @@ function doPost(e){
     if(action === 'closeCash') return json(closeCash(body));
     if(action === 'cashMovement') return json(cashMovement(body));
     if(action === 'registerSale') return json(registerSale(body));
+    if(action === 'createSale') return json(createSale(body));
 
     return json({ok:false,error:'UNKNOWN_ACTION'});
   }catch(err){
@@ -401,6 +402,43 @@ function getSales(){
       items:(()=>{try{return JSON.parse(x.itemsJson||'[]')}catch(e){return[]}})()
     }))
     .sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+}
+
+
+function createSale(b){
+  if(!requireStaff(b.staffKey)) return {ok:false,error:'UNAUTHORIZED'};
+  const lock=LockService.getScriptLock();
+  lock.waitLock(10000);
+  try{
+    const cash=getCash();
+    if(cash.estado!=='abierta') return {ok:false,error:'CASH_CLOSED'};
+
+    const items=Array.isArray(b.items)?b.items:[];
+    const total=Number(b.total||0);
+    const efectivo=Number(b.efectivo||0);
+    if(!items.length) return {ok:false,error:'EMPTY_SALE'};
+    if(total<=0) return {ok:false,error:'INVALID_TOTAL'};
+    if(efectivo<total) return {ok:false,error:'INSUFFICIENT_CASH'};
+
+    const ordersSh=sheet(SHEETS.orders,HEADERS.orders);
+    const salesSh=sheet(SHEETS.sales,HEADERS.sales);
+    const movSh=sheet(SHEETS.movements,HEADERS.movements);
+    const orderId='P-'+Utilities.getUuid().slice(0,6).toUpperCase();
+    const token=Utilities.getUuid();
+    const saleId=String(b.id||('V-'+Utilities.getUuid().slice(0,6).toUpperCase()));
+    const now=new Date().toISOString();
+    const cliente=String(b.cliente||'Caja Local');
+    const order={id:orderId,createdAt:now,updatedAt:now,token,cliente,deliveryType:'pickup',address:'',items,total,status:'pending',source:'pos'};
+    ordersSh.appendRow([order.id,order.createdAt,order.updatedAt,order.token,order.cliente,order.deliveryType,order.address,JSON.stringify(order.items),order.total,order.status,order.source]);
+
+    const sale={id:saleId,timestamp:now,orderId,total,efectivo,cambio:Number(b.cambio||Math.max(0,efectivo-total)),source:'pos',items,cliente};
+    salesSh.appendRow([sale.id,sale.timestamp,sale.orderId,sale.total,sale.efectivo,sale.cambio,sale.source,JSON.stringify(sale.items),sale.cliente]);
+
+    const movement={id:'M-'+Utilities.getUuid().slice(0,6).toUpperCase(),timestamp:now,tipo:'Venta',monto:total,detalle:'Ticket '+sale.id+' | '+items.map(i=>(Number(i.qty)||1)+'x '+String(i.nombre||'Producto')).join(', '),orderId,source:'pos'};
+    movSh.appendRow([movement.id,movement.timestamp,movement.tipo,movement.monto,movement.detalle,movement.orderId,movement.source]);
+
+    return {ok:true,sale,order};
+  }finally{lock.releaseLock();}
 }
 
 function getDashboard(){

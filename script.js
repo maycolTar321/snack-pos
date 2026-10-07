@@ -356,18 +356,19 @@ $("btn-confirm-sale").onclick = async () => {
   setConnection(true,"Registrando venta");
   const order=await apiPost({action:"createOrder",cliente:"Caja Local",deliveryType:"pickup",address:"",items:sale.items.map(i=>({id:i.id,nombre:i.nombre,precio:Number(i.precio),qty:Number(i.qty),categoria:i.categoria,imagen:i.imagen})),total:sale.total,source:"pos"});
   if(!order.ok)throw new Error(order.error||"No se creó la comanda");
-  const remoteSale=await apiPost({action:"registerSale",staffKey:STAFF_KEY,id:sale.id,orderId:order.order.id,total:sale.total,efectivo:sale.cash,cambio:sale.change,source:"pos",cliente:"Caja Local",items:sale.items});
-  if(!remoteSale.ok)throw new Error(remoteSale.error||"No se registró la venta");
-  sales.unshift({...sale,remoteId:order.order.id});
+  // La venta se registra en una sola operación centralizada para evitar que
+  // el pedido quede creado pero la venta no.
+  const remoteSale=await apiPost({action:"createSale",staffKey:STAFF_KEY,id:sale.id,total:sale.total,efectivo:sale.cash,cambio:sale.change,source:"pos",cliente:"Caja Local",items:sale.items,deliveryType:"pickup"});
+  if(!remoteSale.ok)throw new Error(remoteSale.error||"No se pudo sincronizar la venta");
+  sales.unshift({...sale,remoteId:remoteSale.sale?.orderId||remoteSale.order?.id||""});
   localStorage.setItem("lachura_sales",JSON.stringify(sales.slice(0,50)));
   printTicket(sale);
   cart=[];update();close("checkoutModal");
   await refreshSharedState(false);
   toast("Venta sincronizada con Caja y Cocina");
  }catch(err){
-  sales.unshift(sale);
-  localStorage.setItem("lachura_sales",JSON.stringify(sales.slice(0,50)));
-  toast("No se pudo sincronizar la venta");
+  const msg=String(err?.message||err||"Error desconocido");
+  toast(`Venta no sincronizada: ${msg}`);
   console.error("LA CHURA SALE",err);
  }
 };
